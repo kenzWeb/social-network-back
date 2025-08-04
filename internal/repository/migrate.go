@@ -72,21 +72,12 @@ func createIndexes(db *gorm.DB) error {
 }
 
 func createConstraints(db *gorm.DB) error {
-	
 	if err := db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS unique_likes_user_post ON likes(user_id, post_id)").Error; err != nil {
 		return err
 	}
 	
 	if err := db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS unique_follows_follower_following ON follows(follower_id, following_id)").Error; err != nil {
 		return err
-	}
-
-	
-	if err := db.Exec("ALTER TABLE follows ADD CONSTRAINT check_no_self_follow CHECK (follower_id != following_id)").Error; err != nil {
-		
-		if err.Error() != "constraint \"check_no_self_follow\" already exists" {
-			return err
-		}
 	}
 
 	return nil

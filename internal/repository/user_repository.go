@@ -3,7 +3,6 @@ package repository
 import (
 	"modern-social-media/internal/models"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -21,7 +20,7 @@ func (r *UserRepository) CreateUser(user *models.User) error {
 }
 
 
-func (r *UserRepository) GetUserByID(id uuid.UUID) (*models.User, error) {
+func (r *UserRepository) GetUserByID(id string) (*models.User, error) {
 	var user models.User
 	err := r.db.Where("id = ?", id).First(&user).Error
 	if err != nil {
@@ -56,7 +55,7 @@ func (r *UserRepository) UpdateUser(user *models.User) error {
 }
 
 
-func (r *UserRepository) DeleteUser(id uuid.UUID) error {
+func (r *UserRepository) DeleteUser(id string) error {
 	return r.db.Delete(&models.User{}, id).Error
 }
 
@@ -68,7 +67,7 @@ func (r *UserRepository) GetAllUsers(limit, offset int) ([]models.User, error) {
 }
 
 
-func (r *UserRepository) GetUserWithPosts(id uuid.UUID) (*models.User, error) {
+func (r *UserRepository) GetUserWithPosts(id string) (*models.User, error) {
 	var user models.User
 	err := r.db.Preload("Posts").Where("id = ?", id).First(&user).Error
 	if err != nil {
