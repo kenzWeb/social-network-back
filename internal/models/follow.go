@@ -13,12 +13,10 @@ type Follow struct {
 	FollowingID uuid.UUID `gorm:"type:uuid;not null" json:"following_id"`
 	CreatedAt   time.Time `json:"created_at"`
 
-	// Связи
 	Follower  User `gorm:"foreignKey:FollowerID" json:"follower,omitempty"`
 	Following User `gorm:"foreignKey:FollowingID" json:"following,omitempty"`
 }
 
-// BeforeCreate автоматически генерирует UUID перед созданием
 func (f *Follow) BeforeCreate(tx *gorm.DB) error {
 	if f.ID == uuid.Nil {
 		f.ID = uuid.New()
@@ -26,7 +24,6 @@ func (f *Follow) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-// Уникальный индекс для пары (FollowerID, FollowingID)
 func (Follow) TableName() string {
 	return "follows"
 }

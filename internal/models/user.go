@@ -11,13 +11,14 @@ type User struct {
 	ID           uuid.UUID `gorm:"type:uuid;primaryKey;default:uuid_generate_v4()" json:"id"`
 	Username     string    `gorm:"uniqueIndex;not null;size:50" json:"username"`
 	Email        string    `gorm:"uniqueIndex;not null;size:100" json:"email"`
-	PasswordHash string    `gorm:"not null;size:255" json:"-"`
+	Password string    `gorm:"not null;size:255" json:"-"`
 	FirstName    string    `gorm:"size:50" json:"first_name"`
 	LastName     string    `gorm:"size:50" json:"last_name"`
 	Bio          string    `gorm:"type:text" json:"bio"`
 	AvatarURL    string    `gorm:"size:255" json:"avatar_url"`
 	IsVerified   bool      `gorm:"default:false" json:"is_verified"`
 	IsActive     bool      `gorm:"default:true" json:"is_active"`
+	Is2FAEnabled bool      `gorm:"default:false" json:"is_2fa_enabled"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 
