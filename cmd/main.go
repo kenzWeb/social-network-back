@@ -2,11 +2,17 @@ package main
 
 import (
 	"log"
+	"modern-social-media/internal/env"
 	"modern-social-media/internal/repository"
 
-	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
+
+type application struct {
+	port int
+	jwtSecret string
+	models repository.Models
+}
 
 func main() {
 	
@@ -36,7 +42,14 @@ func main() {
 	log.Println("Успешно подключено к PostgreSQL базе данных с GORM")
 	log.Println("Миграции выполнены успешно")
 
-	r := gin.Default()
+	models := repository.NewModels(db)
+	app := &application{
+		port: env.GetEnvInt("PORT", 8080),
+		jwtSecret: env.GetEnvString("JWT_SECRET", "123456"),
+		models: *models,
+	}
 
-	r.Run(":5001")
+	if err := app.serve(); err != nil {
+		log.Fatal(err)
+	}
 }

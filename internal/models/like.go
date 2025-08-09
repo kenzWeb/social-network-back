@@ -17,7 +17,6 @@ type Like struct {
 	Post Post `gorm:"foreignKey:PostID" json:"post,omitempty"`
 }
 
-// BeforeCreate автоматически генерирует CUID перед созданием
 func (l *Like) BeforeCreate(tx *gorm.DB) error {
 	if l.ID == "" {
 		l.ID = cuid.New()
@@ -25,7 +24,6 @@ func (l *Like) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-// Уникальный индекс для пары (UserID, PostID)
 func (Like) TableName() string {
 	return "likes"
 }

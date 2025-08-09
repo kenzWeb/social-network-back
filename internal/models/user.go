@@ -22,7 +22,6 @@ type User struct {
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 
-	// Связи
 	Posts     []Post    `gorm:"foreignKey:UserID" json:"posts,omitempty"`
 	Likes     []Like    `gorm:"foreignKey:UserID" json:"likes,omitempty"`
 	Comments  []Comment `gorm:"foreignKey:UserID" json:"comments,omitempty"`
@@ -30,7 +29,6 @@ type User struct {
 	Following []Follow  `gorm:"foreignKey:FollowerID" json:"following,omitempty"`
 }
 
-// BeforeCreate автоматически генерирует CUID перед созданием
 func (u *User) BeforeCreate(tx *gorm.DB) error {
 	if u.ID == "" {
 		u.ID = cuid.New()
