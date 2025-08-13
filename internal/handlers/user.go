@@ -4,6 +4,7 @@ import (
 	"modern-social-media/internal/models"
 	"modern-social-media/internal/repository"
 	"net/http"
+	"reflect"
 
 	"github.com/gin-gonic/gin"
 )
@@ -97,35 +98,37 @@ func UpdateUser(usersRepo repository.UserRepository) gin.HandlerFunc {
 			return
 		}
 
-		if req.Username != nil {
-			existing.Username = *req.Username
-		}
-		if req.Email != nil {
-			existing.Email = *req.Email
-		}
-		if req.Password != nil {
-			existing.Password = *req.Password 
-		}
-		if req.FirstName != nil {
-			existing.FirstName = *req.FirstName
-		}
-		if req.LastName != nil {
-			existing.LastName = *req.LastName
-		}
-		if req.Bio != nil {
-			existing.Bio = *req.Bio
-		}
-		if req.AvatarURL != nil {
-			existing.AvatarURL = *req.AvatarURL
-		}
-		if req.IsActive != nil {
-			existing.IsActive = *req.IsActive
-		}
+		applyUserPatch(existing, req)
 
 		if err := usersRepo.Update(c.Request.Context(), existing); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 		c.JSON(http.StatusOK, existing)
+	}
+}
+
+// applyUserPatch применяет непустые (не nil) поля структуры patch к existing через reflection.
+// Предполагается, что имена экспортируемых полей patch совпадают с именами полей модели User.
+func applyUserPatch(existing *models.User, patch interface{}) {
+	rv := reflect.ValueOf(patch)
+	// работаем только со структурой (значением)
+	if rv.Kind() != reflect.Struct {
+		return
+	}
+	ev := reflect.ValueOf(existing).Elem()
+	rt := rv.Type()
+	for i := 0; i < rv.NumField(); i++ {
+		f := rv.Field(i)
+		if f.Kind() != reflect.Ptr || f.IsNil() { // нужны только указатели и не nil
+			continue
+		}
+		fieldName := rt.Field(i).Name
+		target := ev.FieldByName(fieldName)
+		if !target.IsValid() || !target.CanSet() {
+			continue
+		}
+		// Устанавливаем разыменованное значение
+		target.Set(f.Elem())
 	}
 }
