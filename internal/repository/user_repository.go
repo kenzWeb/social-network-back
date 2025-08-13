@@ -11,6 +11,14 @@ type UserRepository struct {
 	db *gorm.DB
 }
 
+func (r UserRepository) GetAll(ctx context.Context) ([]models.User, error) {
+	var users []models.User
+	if err := r.db.WithContext(ctx).Find(&users).Error; err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
 func (r UserRepository) Create(ctx context.Context, u *models.User) error {
 	return r.db.WithContext(ctx).Create(u).Error
 }
