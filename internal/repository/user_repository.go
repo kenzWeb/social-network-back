@@ -11,6 +11,14 @@ type UserRepository struct {
 	db *gorm.DB
 }
 
+func (r UserRepository) GetByUsername(ctx context.Context, username string) (*models.User, error) {
+	var user models.User
+	if err := r.db.WithContext(ctx).First(&user, "username = ?", username).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
 func (r UserRepository) GetAll(ctx context.Context) ([]models.User, error) {
 	var users []models.User
 	if err := r.db.WithContext(ctx).Find(&users).Error; err != nil {

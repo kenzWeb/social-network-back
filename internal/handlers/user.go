@@ -1,10 +1,12 @@
 package handlers
 
 import (
-	"modern-social-media/internal/models"
-	"modern-social-media/internal/repository"
 	"net/http"
 	"reflect"
+
+	"modern-social-media/internal/auth"
+	"modern-social-media/internal/models"
+	"modern-social-media/internal/repository"
 
 	"github.com/gin-gonic/gin"
 )
@@ -58,10 +60,16 @@ func CreateUser(usersRepo repository.UserRepository) gin.HandlerFunc {
 			return
 		}
 
+		hashed, err := auth.HashPassword(req.Password)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to hash password"})
+			return
+		}
+
 		user := &models.User{
 			Username:  req.Username,
 			Email:     req.Email,
-			Password:  req.Password,
+			Password:  hashed,
 			FirstName: req.FirstName,
 			LastName:  req.LastName,
 		}
@@ -70,6 +78,7 @@ func CreateUser(usersRepo repository.UserRepository) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+
 		c.JSON(http.StatusCreated, user)
 	}
 }
@@ -100,6 +109,16 @@ func UpdateUser(usersRepo repository.UserRepository) gin.HandlerFunc {
 			return
 		}
 
+		if req.Password != nil {
+			hashed, err := auth.HashPassword(*req.Password)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to hash password"})
+				return
+			}
+			existing.Password = hashed
+			req.Password = nil
+		}
+
 		applyUserPatch(existing, req)
 
 		if err := usersRepo.Update(c.Request.Context(), existing); err != nil {
@@ -123,11 +142,8 @@ func DeleteUser(userRepo repository.UserRepository) gin.HandlerFunc {
 	}
 }
 
-// applyUserPatch применяет непустые (не nil) поля структуры patch к existing через reflection.
-// Предполагается, что имена экспортируемых полей patch совпадают с именами полей модели User.
 func applyUserPatch(existing *models.User, patch interface{}) {
 	rv := reflect.ValueOf(patch)
-	// работаем только со структурой (значением)
 	if rv.Kind() != reflect.Struct {
 		return
 	}
@@ -135,7 +151,7 @@ func applyUserPatch(existing *models.User, patch interface{}) {
 	rt := rv.Type()
 	for i := 0; i < rv.NumField(); i++ {
 		f := rv.Field(i)
-		if f.Kind() != reflect.Ptr || f.IsNil() { // нужны только указатели и не nil
+		if f.Kind() != reflect.Ptr || f.IsNil() {
 			continue
 		}
 		fieldName := rt.Field(i).Name
@@ -143,7 +159,6 @@ func applyUserPatch(existing *models.User, patch interface{}) {
 		if !target.IsValid() || !target.CanSet() {
 			continue
 		}
-		// Устанавливаем разыменованное значение
 		target.Set(f.Elem())
 	}
 }
