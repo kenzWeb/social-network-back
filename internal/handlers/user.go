@@ -84,14 +84,16 @@ func UpdateUser(usersRepo repository.UserRepository) gin.HandlerFunc {
 		}
 
 		var req struct {
-			Username  *string `json:"username"`
-			Email     *string `json:"email"`
-			Password  *string `json:"password"`
-			FirstName *string `json:"first_name"`
-			LastName  *string `json:"last_name"`
-			Bio       *string `json:"bio"`
-			AvatarURL *string `json:"avatar_url"`
-			IsActive  *bool   `json:"is_active"`
+			Username     *string `json:"username"`
+			Email        *string `json:"email"`
+			Password     *string `json:"password"`
+			FirstName    *string `json:"first_name"`
+			LastName     *string `json:"last_name"`
+			Bio          *string `json:"bio"`
+			AvatarURL    *string `json:"avatar_url"`
+			IsActive     *bool   `json:"is_active"`
+			IsVerified   *bool   `json:"is_verified"`
+			Is2FAEnabled *bool   `json:"is_2fa_enabled"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
@@ -105,6 +107,19 @@ func UpdateUser(usersRepo repository.UserRepository) gin.HandlerFunc {
 			return
 		}
 		c.JSON(http.StatusOK, existing)
+	}
+}
+
+func DeleteUser(userRepo repository.UserRepository) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id := c.Param("id")
+
+		if err := userRepo.Delete(c.Request.Context(), id); err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+			return
+		}
+
+		c.Status(http.StatusNoContent)
 	}
 }
 
