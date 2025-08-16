@@ -22,7 +22,7 @@ type Post struct {
 	Comments []Comment `gorm:"foreignKey:PostID" json:"comments,omitempty"`
 }
 
-// BeforeCreate автоматически генерирует CUID перед созданием
+
 func (p *Post) BeforeCreate(tx *gorm.DB) error {
 	if p.ID == "" {
 		p.ID = cuid.New()
