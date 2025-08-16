@@ -15,6 +15,7 @@ func MigrateDatabase(db *gorm.DB) error {
 		&models.Like{},
 		&models.Comment{},
 		&models.Follow{},
+		&models.VerificationCode{},
 	)
 	if err != nil {
 		return err

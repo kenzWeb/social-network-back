@@ -4,36 +4,36 @@ import (
 	"log"
 	"modern-social-media/internal/env"
 	"modern-social-media/internal/repository"
+	"modern-social-media/internal/services"
 
 	"github.com/joho/godotenv"
 )
 
 type application struct {
-	port int
-	jwtSecret string
-	models repository.Models
+	port            int
+	jwtSecret       string
+	models          repository.Models
+	mailer          services.EmailSender
+	email2FAEnabled bool
 }
 
 func main() {
-	
+
 	if err := godotenv.Load(); err != nil {
 		log.Printf("Не удалось загрузить .env файл: %v", err)
 	}
-
 
 	db, err := repository.InitDb()
 	if err != nil {
 		log.Fatalf("Ошибка подключения к базе данных: %v", err)
 	}
 
-	
 	sqlDB, err := db.DB()
 	if err != nil {
 		log.Fatalf("Ошибка получения sql.DB: %v", err)
 	}
 	defer sqlDB.Close()
 
-	
 	err = repository.MigrateDatabase(db)
 	if err != nil {
 		log.Fatalf("Ошибка миграции: %v", err)
@@ -43,10 +43,19 @@ func main() {
 	log.Println("Миграции выполнены успешно")
 
 	models := repository.NewModels(db)
+	mailer := &services.SMTPSender{
+		Host:     env.GetEnvString("SMTP_HOST", "localhost"),
+		Port:     env.GetEnvInt("SMTP_PORT", 587),
+		Username: env.GetEnvString("SMTP_USERNAME", ""),
+		Password: env.GetEnvString("SMTP_PASSWORD", ""),
+		From:     env.GetEnvString("SMTP_FROM", "noreply@example.com"),
+	}
 	app := &application{
-		port: env.GetEnvInt("PORT", 8080),
-		jwtSecret: env.GetEnvString("JWT_SECRET", "123456"),
-		models: *models,
+		port:            env.GetEnvInt("PORT", 8080),
+		jwtSecret:       env.GetEnvString("JWT_SECRET", "123456"),
+		models:          *models,
+		mailer:          mailer,
+		email2FAEnabled: env.GetEnvBool("EMAIL_2FA_ENABLED", true),
 	}
 
 	if err := app.serve(); err != nil {
