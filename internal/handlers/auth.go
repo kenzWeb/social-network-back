@@ -62,7 +62,7 @@ func Register(usersRepo repository.UserRepository, codesRepo repository.Verifica
 			return
 		}
 		user.Password = hashed
-		if err := usersRepo.Create(c.Request.Context(), user); err != nil {
+		if err := usersRepo.CreateUser(c.Request.Context(), user); err != nil {
 			if strings.Contains(err.Error(), "SQLSTATE 23505") {
 				c.JSON(http.StatusConflict, gin.H{"error": "email or username already exists"})
 				return
@@ -237,7 +237,7 @@ func VerifyEmail(usersRepo repository.UserRepository, codesRepo repository.Verif
 		}
 		_ = codesRepo.Consume(c.Request.Context(), v.ID)
 		user.IsVerified = true
-		if err := usersRepo.Update(c.Request.Context(), user); err != nil {
+		if err := usersRepo.UpdateUser(c.Request.Context(), user); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update user"})
 			return
 		}
@@ -410,7 +410,7 @@ func Toggle2FA(usersRepo repository.UserRepository, jwtSecret string) gin.Handle
 			return
 		}
 		user.Is2FAEnabled = req.Enable
-		if err := usersRepo.Update(c.Request.Context(), user); err != nil {
+		if err := usersRepo.UpdateUser(c.Request.Context(), user); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update user"})
 			return
 		}

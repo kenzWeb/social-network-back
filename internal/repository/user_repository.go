@@ -27,7 +27,7 @@ func (r UserRepository) GetAll(ctx context.Context) ([]models.User, error) {
 	return users, nil
 }
 
-func (r UserRepository) Create(ctx context.Context, u *models.User) error {
+func (r UserRepository) CreateUser(ctx context.Context, u *models.User) error {
 	return r.db.WithContext(ctx).Create(u).Error
 }
 
@@ -47,7 +47,7 @@ func (r UserRepository) GetByEmail(ctx context.Context, email string) (*models.U
 	return &user, nil
 }
 
-func (r UserRepository) Update(ctx context.Context, u *models.User) error {
+func (r UserRepository) UpdateUser(ctx context.Context, u *models.User) error {
 	return r.db.WithContext(ctx).Save(u).Error
 }
 

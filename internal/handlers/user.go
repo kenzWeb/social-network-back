@@ -74,7 +74,7 @@ func CreateUser(usersRepo repository.UserRepository) gin.HandlerFunc {
 			LastName:  req.LastName,
 		}
 
-		if err := usersRepo.Create(c.Request.Context(), user); err != nil {
+		if err := usersRepo.CreateUser(c.Request.Context(), user); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -121,7 +121,7 @@ func UpdateUser(usersRepo repository.UserRepository) gin.HandlerFunc {
 
 		applyUserPatch(existing, req)
 
-		if err := usersRepo.Update(c.Request.Context(), existing); err != nil {
+		if err := usersRepo.UpdateUser(c.Request.Context(), existing); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}

@@ -35,7 +35,6 @@ func HashPassword(password string) (string, error) {
 	return encoded, nil
 }
 
-// VerifyPassword сверяет пароль с закодированным Argon2id-хешем.
 func VerifyPassword(encodedHash, password string) (bool, error) {
 	if encodedHash == "" || password == "" {
 		return false, errors.New("empty input")
@@ -45,7 +44,6 @@ func VerifyPassword(encodedHash, password string) (bool, error) {
 		return false, errors.New("invalid hash format")
 	}
 
-	// parts[2] == v=19 (игнорируем)
 	var mem uint32
 	var time uint32
 	var threads uint8
