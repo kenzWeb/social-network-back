@@ -9,6 +9,27 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func GetPostsByUser(postRepo repository.PostRepository) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		uidAny, ok := c.Get("userID")
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			return
+		}
+
+		userID, _ := uidAny.(string)
+
+		posts, err := postRepo.GetPostsByUser(c.Request.Context(), userID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		println(c)
+		c.JSON(http.StatusOK, posts)
+	}
+}
+
 func CreatePost(postRepo repository.PostRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req struct {
