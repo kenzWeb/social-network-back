@@ -122,3 +122,31 @@ func UpdatePost(postRepo repository.PostRepository) gin.HandlerFunc {
 		c.JSON(http.StatusOK, post)
 	}
 }
+
+func DeletePostByUser(postRepo repository.PostRepository) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id := c.Param("id")
+
+		uidAny, ok := c.Get("userID")
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			return
+		}
+		userID, _ := uidAny.(string)
+
+		if err := postRepo.DeletePostByUser(c.Request.Context(), id, userID); err != nil {
+			if strings.Contains(strings.ToLower(err.Error()), "record not found") {
+				c.JSON(http.StatusNotFound, gin.H{"error": "post not found"})
+				return
+			}
+			if strings.Contains(err.Error(), "SQLSTATE 23503") {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "userId error"})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusNoContent, "Deleted")
+	}
+}

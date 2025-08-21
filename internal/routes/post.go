@@ -13,4 +13,6 @@ func RegisterPostRoutes(rg *gin.RouterGroup, d Deps) {
 	rg.POST("/post", middleware.Auth(d.JWTSecret), handlers.CreatePost(d.Models.Posts))
 
 	rg.PUT("/post/:id", middleware.Auth(d.JWTSecret), handlers.UpdatePost(d.Models.Posts))
+
+	rg.DELETE("/post/:id", middleware.Auth(d.JWTSecret), handlers.DeletePostByUser(d.Models.Posts))
 }
