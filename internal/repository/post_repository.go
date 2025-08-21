@@ -34,7 +34,7 @@ func (r PostRepository) UpdatePostByUser(ctx context.Context, postID, userID str
 	}
 	post.Content = p.Content
 	post.ImageURL = p.ImageURL
-	
+
 	return r.db.WithContext(ctx).Save(&post).Error
 }
 
@@ -52,6 +52,6 @@ func (r PostRepository) GetAllPosts(ctx context.Context) ([]models.Post, error) 
 	return posts, nil
 }
 
-func (r PostRepository) Create(ctx context.Context, p *models.Post) error {
+func (r PostRepository) CreatePost(ctx context.Context, p *models.Post) error {
 	return r.db.WithContext(ctx).Create(p).Error
 }

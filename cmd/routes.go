@@ -2,6 +2,7 @@ package main
 
 import (
 	"modern-social-media/internal/handlers"
+	"modern-social-media/internal/middleware"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -30,6 +31,9 @@ func (app *application) routes() http.Handler {
 	v1.POST("/auth/2fa/verify", handlers.VerifyLogin2FA(app.models.Users, app.models.VerificationCodes, app.jwtSecret))
 	v1.POST("/auth/2fa/request", handlers.Request2FACode(app.models.Users, app.models.VerificationCodes, app.mailer, app.email2FAEnabled))
 	v1.POST("/auth/toggle-2fa", handlers.Toggle2FA(app.models.Users, app.jwtSecret))
+
+	// post
+	v1.POST("/post", middleware.Auth(app.jwtSecret), handlers.CreatePost(app.models.Posts))
 
 	return g
 }

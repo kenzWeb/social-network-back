@@ -52,7 +52,7 @@ func main() {
 	}
 	app := &application{
 		port:            env.GetEnvInt("PORT", 8080),
-		jwtSecret:       env.GetEnvString("JWT_SECRET", "123456"),
+		jwtSecret:       env.GetEnvString("JWT_SECRET", ""),
 		models:          *models,
 		mailer:          mailer,
 		email2FAEnabled: env.GetEnvBool("EMAIL_2FA_ENABLED", true),
