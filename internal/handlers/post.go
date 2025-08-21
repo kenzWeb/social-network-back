@@ -132,6 +132,7 @@ func DeletePostByUser(postRepo repository.PostRepository) gin.HandlerFunc {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 			return
 		}
+
 		userID, _ := uidAny.(string)
 
 		if err := postRepo.DeletePostByUser(c.Request.Context(), id, userID); err != nil {
@@ -147,6 +148,6 @@ func DeletePostByUser(postRepo repository.PostRepository) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusNoContent, "Deleted")
+		c.Status(http.StatusNoContent)
 	}
 }

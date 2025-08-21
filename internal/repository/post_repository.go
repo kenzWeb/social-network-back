@@ -43,7 +43,14 @@ func (r PostRepository) UpdatePostByUser(ctx context.Context, postID, userID str
 }
 
 func (r PostRepository) DeletePostByUser(ctx context.Context, postID, userID string) error {
-	return r.db.WithContext(ctx).Where("id = ? AND user_id = ?", postID, userID).Delete(&models.Post{}).Error
+	res := r.db.WithContext(ctx).Where("id = ? AND user_id = ?", postID, userID).Delete(&models.Post{})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }
 
 func (r PostRepository) GetAllPosts(ctx context.Context) ([]models.Post, error) {
