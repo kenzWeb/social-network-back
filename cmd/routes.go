@@ -18,7 +18,7 @@ func (app *application) routes() http.Handler {
 	v1.GET("/user", handlers.GetAllUsers(app.models.Users))
 	v1.GET("/user/:id", handlers.GetUserById(app.models.Users))
 	v1.GET("/user/by-email/:email", handlers.GetUserByEmail(app.models.Users))
-	v1.POST("/user", handlers.CreateUser(app.models.Users))
+	v1.POST("/user", middleware.StaticToken(app.adminToken), handlers.CreateUser(app.models.Users))
 	v1.PUT("/user/:id", handlers.UpdateUser(app.models.Users))
 	v1.DELETE("/user/:id", handlers.DeleteUser(app.models.Users))
 

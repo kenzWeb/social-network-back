@@ -38,6 +38,24 @@ func Auth(jwtSecret string) gin.HandlerFunc {
 			return
 		}
 		c.Set("userID", sub)
+		if v, exists := claims["is_admin"]; exists {
+			c.Set("isAdmin", v)
+		}
+		c.Next()
+	}
+}
+
+func StaticToken(required string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if required == "" {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "admin token not configured"})
+			return
+		}
+		token := c.GetHeader("X-Admin-Token")
+		if token == "" || token != required {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "forbidden"})
+			return
+		}
 		c.Next()
 	}
 }

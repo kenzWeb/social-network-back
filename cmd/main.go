@@ -12,6 +12,7 @@ import (
 type application struct {
 	port            int
 	jwtSecret       string
+	adminToken      string
 	models          repository.Models
 	mailer          services.EmailSender
 	email2FAEnabled bool
@@ -53,6 +54,7 @@ func main() {
 	app := &application{
 		port:            env.GetEnvInt("PORT", 8080),
 		jwtSecret:       env.GetEnvString("JWT_SECRET", ""),
+		adminToken:      env.GetEnvString("ADMIN_TOKEN", ""),
 		models:          *models,
 		mailer:          mailer,
 		email2FAEnabled: env.GetEnvBool("EMAIL_2FA_ENABLED", true),
