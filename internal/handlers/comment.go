@@ -52,11 +52,13 @@ func GetCommentById(commentRepo repository.CommentRepository) gin.HandlerFunc {
 
 func GetCommentsByUser(commentRepo repository.CommentRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userID := c.Param("id")
-		if userID == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "user id is required"})
+		uidAny, ok := c.Get("userID")
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 			return
 		}
+		userID, _ := uidAny.(string)
+
 		comments, err := commentRepo.GetCommentsByUser(c.Request.Context(), userID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve comments"})

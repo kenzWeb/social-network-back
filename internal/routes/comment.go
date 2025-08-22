@@ -10,7 +10,7 @@ import (
 func RegisterCommentsRoutes(rg *gin.RouterGroup, d Deps) {
 	rg.GET("/comment/post/:id", handlers.GetCommentsByPost(d.Models.Comments))
 
-	rg.GET("/comment/user/:id", handlers.GetCommentsByUser(d.Models.Comments))
+	rg.GET("/comment/user/", middleware.Auth(d.JWTSecret), handlers.GetCommentsByUser(d.Models.Comments))
 
 	rg.GET("/comment/:id", handlers.GetCommentById(d.Models.Comments))
 

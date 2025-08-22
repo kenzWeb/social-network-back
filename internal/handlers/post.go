@@ -69,7 +69,12 @@ func CreatePost(postRepo repository.PostRepository) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusCreated, post)
+		full, err := postRepo.GetById(c.Request.Context(), post.ID)
+		if err != nil {
+			c.JSON(http.StatusCreated, post)
+			return
+		}
+		c.JSON(http.StatusCreated, full)
 	}
 }
 
@@ -118,8 +123,12 @@ func UpdatePost(postRepo repository.PostRepository) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-
-		c.JSON(http.StatusOK, post)
+		full, err := postRepo.GetById(c.Request.Context(), id)
+		if err != nil {
+			c.JSON(http.StatusOK, post)
+			return
+		}
+		c.JSON(http.StatusOK, full)
 	}
 }
 
