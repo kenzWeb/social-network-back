@@ -25,7 +25,13 @@ func (r CommentRepository) GetCommentsByPost(ctx context.Context, postId string)
 	}
 
 	var comments []*models.Comment
-	if err := r.db.WithContext(ctx).Where("post_id = ?", postId).Order("created_at ASC").Find(&comments).Error; err != nil {
+	if err := r.db.WithContext(ctx).
+		Preload("User").
+		Preload("Post").
+		Preload("Post.User").
+		Where("post_id = ?", postId).
+		Order("created_at ASC").
+		Find(&comments).Error; err != nil {
 		return nil, err
 	}
 	return comments, nil
@@ -33,7 +39,11 @@ func (r CommentRepository) GetCommentsByPost(ctx context.Context, postId string)
 
 func (r CommentRepository) GetCommentById(ctx context.Context, id string) (*models.Comment, error) {
 	var comment models.Comment
-	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&comment).Error; err != nil {
+	if err := r.db.WithContext(ctx).
+		Preload("User").
+		Preload("Post").
+		Preload("Post.User").
+		Where("id = ?", id).First(&comment).Error; err != nil {
 		return nil, err
 	}
 	return &comment, nil
@@ -41,16 +51,22 @@ func (r CommentRepository) GetCommentById(ctx context.Context, id string) (*mode
 
 func (r CommentRepository) GetCommentsByUser(ctx context.Context, userId string) ([]*models.Comment, error) {
 	var comments []*models.Comment
-	if err := r.db.WithContext(ctx).Where("user_id = ?", userId).Find(&comments).Error; err != nil {
+	if err := r.db.WithContext(ctx).
+		Preload("User").
+		Preload("Post").
+		Preload("Post.User").
+		Where("user_id = ?", userId).Find(&comments).Error; err != nil {
 		return nil, err
 	}
 	return comments, nil
 }
 
 func (r CommentRepository) CreateComment(ctx context.Context, comment *models.Comment) error {
-	// Ensure the post exists before creating a comment
 	var exists bool
 	if err := r.db.WithContext(ctx).
+		Preload("User").
+		Preload("Post").
+		Preload("Post.User").
 		Model(&models.Post{}).
 		Select("count(*) > 0").
 		Where("id = ?", comment.PostID).
@@ -61,4 +77,16 @@ func (r CommentRepository) CreateComment(ctx context.Context, comment *models.Co
 		return gorm.ErrRecordNotFound
 	}
 	return r.db.WithContext(ctx).Create(comment).Error
+}
+
+func (r CommentRepository) GetByIdWithRelations(ctx context.Context, id string) (*models.Comment, error) {
+	var c models.Comment
+	if err := r.db.WithContext(ctx).
+		Preload("User").
+		Preload("Post").
+		Preload("Post.User").
+		First(&c, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return &c, nil
 }

@@ -13,7 +13,9 @@ type PostRepository struct {
 
 func (r PostRepository) GetById(ctx context.Context, id string) (*models.Post, error) {
 	var post models.Post
-	if err := r.db.WithContext(ctx).First(&post, "id = ?", id).Error; err != nil {
+	if err := r.db.WithContext(ctx).
+		Preload("User").
+		First(&post, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
 	return &post, nil
@@ -21,7 +23,9 @@ func (r PostRepository) GetById(ctx context.Context, id string) (*models.Post, e
 
 func (r PostRepository) GetPostsByUser(ctx context.Context, userID string) ([]models.Post, error) {
 	var posts []models.Post
-	if err := r.db.WithContext(ctx).Where("user_id = ?", userID).Find(&posts).Error; err != nil {
+	if err := r.db.WithContext(ctx).
+		Preload("User").
+		Where("user_id = ?", userID).Find(&posts).Error; err != nil {
 		return nil, err
 	}
 	return posts, nil
@@ -33,7 +37,9 @@ func (r PostRepository) CreatePost(ctx context.Context, p *models.Post) error {
 
 func (r PostRepository) UpdatePostByUser(ctx context.Context, postID, userID string, p *models.Post) error {
 	var post models.Post
-	if err := r.db.WithContext(ctx).First(&post, "id = ? AND user_id = ?", postID, userID).Error; err != nil {
+	if err := r.db.WithContext(ctx).
+		Preload("User").
+		First(&post, "id = ? AND user_id = ?", postID, userID).Error; err != nil {
 		return err
 	}
 	post.Content = p.Content
@@ -43,7 +49,9 @@ func (r PostRepository) UpdatePostByUser(ctx context.Context, postID, userID str
 }
 
 func (r PostRepository) DeletePostByUser(ctx context.Context, postID, userID string) error {
-	res := r.db.WithContext(ctx).Where("id = ? AND user_id = ?", postID, userID).Delete(&models.Post{})
+	res := r.db.WithContext(ctx).
+		Preload("User").
+		Where("id = ? AND user_id = ?", postID, userID).Delete(&models.Post{})
 	if res.Error != nil {
 		return res.Error
 	}
@@ -56,7 +64,9 @@ func (r PostRepository) DeletePostByUser(ctx context.Context, postID, userID str
 func (r PostRepository) GetAllPosts(ctx context.Context) ([]models.Post, error) {
 	var posts []models.Post
 
-	if err := r.db.WithContext(ctx).Find(&posts).Error; err != nil {
+	if err := r.db.WithContext(ctx).
+		Preload("User").
+		Find(&posts).Error; err != nil {
 		return nil, err
 	}
 
