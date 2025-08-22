@@ -7,6 +7,7 @@ type Models struct {
 	Users             UserRepository
 	VerificationCodes VerificationCodeRepository
 	Posts             PostRepository
+	Comments          CommentRepository
 }
 
 func NewModels(db *gorm.DB) *Models {
@@ -15,5 +16,6 @@ func NewModels(db *gorm.DB) *Models {
 		Users:             UserRepository{db: db},
 		VerificationCodes: VerificationCodeRepository{db: db},
 		Posts:             PostRepository{db: db},
+		Comments:          CommentRepository{db: db},
 	}
 }
