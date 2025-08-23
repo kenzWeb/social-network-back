@@ -15,5 +15,4 @@ func RegisterCommentsRoutes(rg *gin.RouterGroup, d Deps) {
 	rg.GET("/comment/:id", handlers.GetCommentById(d.Models.Comments))
 
 	rg.POST("/comment/post/:id", middleware.Auth(d.JWTSecret), handlers.CreateComment(d.Models.Comments))
-
 }
