@@ -25,6 +25,7 @@ func (app *application) routes() http.Handler {
 	introutes.RegisterPostRoutes(v1, deps)
 	introutes.RegisterCommentsRoutes(v1, deps)
 	introutes.RegisterStoryRoutes(v1, deps)
+	introutes.RegisterFollowRoutes(v1, deps)
 
 	return g
 }

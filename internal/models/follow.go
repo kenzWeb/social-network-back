@@ -17,7 +17,6 @@ type Follow struct {
 	Following User `gorm:"foreignKey:FollowingID" json:"following,omitempty"`
 }
 
-// BeforeCreate автоматически генерирует CUID перед созданием
 func (f *Follow) BeforeCreate(tx *gorm.DB) error {
 	if f.ID == "" {
 		f.ID = cuid.New()
@@ -25,7 +24,6 @@ func (f *Follow) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-// Уникальный индекс для пары (FollowerID, FollowingID)
 func (Follow) TableName() string {
 	return "follows"
 }
