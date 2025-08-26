@@ -12,7 +12,6 @@ import (
 
 func GetAllStories(storyRepo repository.StoryRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Получаем ID пользователя из контекста аутентификации
 		uidAny, ok := c.Get("userID")
 		if !ok {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
@@ -20,7 +19,6 @@ func GetAllStories(storyRepo repository.StoryRepository) gin.HandlerFunc {
 		}
 		userID := uidAny.(string)
 
-		// Получаем только истории от пользователей, на которых подписан текущий пользователь (за последние 24 часа)
 		stories, err := storyRepo.GetStoriesFromFollowing(c.Request.Context(), userID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -70,7 +68,7 @@ func GetStoriesByUser(storyRepo repository.StoryRepository) gin.HandlerFunc {
 
 func GetStoriesByUserId(storyRepo repository.StoryRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userID := c.Param("userId")
+		userID := c.Param("id")
 
 		stories, err := storyRepo.GetRecentStoriesByUser(c.Request.Context(), userID)
 		if err != nil {
