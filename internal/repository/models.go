@@ -10,6 +10,7 @@ type Models struct {
 	Comments          CommentRepository
 	Likes             LikeRepository
 	Follows           FollowRepository
+	Stories           StoryRepository
 }
 
 func NewModels(db *gorm.DB) *Models {
@@ -21,5 +22,6 @@ func NewModels(db *gorm.DB) *Models {
 		Comments:          CommentRepository{db: db},
 		Likes:             LikeRepository{db: db},
 		Follows:           FollowRepository{db: db},
+		Stories:           StoryRepository{db: db},
 	}
 }

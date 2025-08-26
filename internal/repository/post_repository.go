@@ -3,12 +3,24 @@ package repository
 import (
 	"context"
 	"modern-social-media/internal/models"
-
+	
 	"gorm.io/gorm"
 )
 
 type PostRepository struct {
 	db *gorm.DB
+}
+
+func (r PostRepository) GetAllPosts(ctx context.Context) ([]models.Post, error) {
+	var posts []models.Post
+
+	if err := r.db.WithContext(ctx).
+		Preload("User").
+		Find(&posts).Error; err != nil {
+		return nil, err
+	}
+
+	return posts, nil
 }
 
 func (r PostRepository) GetById(ctx context.Context, id string) (*models.Post, error) {
@@ -61,14 +73,3 @@ func (r PostRepository) DeletePostByUser(ctx context.Context, postID, userID str
 	return nil
 }
 
-func (r PostRepository) GetAllPosts(ctx context.Context) ([]models.Post, error) {
-	var posts []models.Post
-
-	if err := r.db.WithContext(ctx).
-		Preload("User").
-		Find(&posts).Error; err != nil {
-		return nil, err
-	}
-
-	return posts, nil
-}
