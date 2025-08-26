@@ -7,8 +7,12 @@ import (
 )
 
 func MigrateDatabase(db *gorm.DB) error {
+	err := customMigrations(db)
+	if err != nil {
+		return err
+	}
 
-	err := db.AutoMigrate(
+	err = db.AutoMigrate(
 		&models.User{},
 		&models.Post{},
 		&models.Story{},
@@ -65,6 +69,52 @@ func createIndexes(db *gorm.DB) error {
 	}
 	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_follows_following_id ON follows(following_id)").Error; err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func customMigrations(db *gorm.DB) error {
+	var tableExists bool
+	err := db.Raw("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'stories')").Scan(&tableExists).Error
+	if err != nil {
+		return err
+	}
+
+	if tableExists {
+		var columnExists bool
+		err = db.Raw("SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'stories' AND column_name = 'image_url')").Scan(&columnExists).Error
+		if err != nil {
+			return err
+		}
+
+		if columnExists {
+			if err := db.Exec("ALTER TABLE stories ADD COLUMN IF NOT EXISTS media_url varchar(255)").Error; err != nil {
+				return err
+			}
+			if err := db.Exec("ALTER TABLE stories ADD COLUMN IF NOT EXISTS media_type varchar(20) DEFAULT 'image'").Error; err != nil {
+				return err
+			}
+
+			if err := db.Exec("UPDATE stories SET media_url = image_url WHERE media_url IS NULL AND image_url IS NOT NULL").Error; err != nil {
+				return err
+			}
+
+			if err := db.Exec("UPDATE stories SET media_type = 'image' WHERE media_type IS NULL").Error; err != nil {
+				return err
+			}
+
+			if err := db.Exec("ALTER TABLE stories DROP COLUMN IF EXISTS image_url").Error; err != nil {
+				return err
+			}
+
+			if err := db.Exec("ALTER TABLE stories ALTER COLUMN media_url SET NOT NULL").Error; err != nil {
+				return err
+			}
+			if err := db.Exec("ALTER TABLE stories ALTER COLUMN media_type SET NOT NULL").Error; err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil

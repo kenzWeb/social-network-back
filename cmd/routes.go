@@ -11,6 +11,8 @@ func (app *application) routes() http.Handler {
 	g := gin.New()
 	g.Use(gin.Logger(), gin.Recovery())
 
+	g.Static("/uploads", "./uploads")
+
 	v1 := g.Group("/api/v1")
 
 	deps := introutes.Deps{

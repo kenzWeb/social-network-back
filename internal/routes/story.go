@@ -9,7 +9,7 @@ import (
 
 func RegisterStoryRoutes(rg *gin.RouterGroup, d Deps) {
 	rg.GET("/story/:id", handlers.GetStoryById(d.Models.Stories))
-	rg.GET("/stories/user/:id", handlers.GetStoriesByUserId(d.Models.Stories))
+	rg.GET("/story/user/:id", handlers.GetStoriesByUserId(d.Models.Stories))
 
 	stories := rg.Group("/story")
 	stories.Use(middleware.Auth(d.JWTSecret))
@@ -22,5 +22,5 @@ func RegisterStoryRoutes(rg *gin.RouterGroup, d Deps) {
 		stories.POST("/:id/like", handlers.ToggleStoryLike(d.Models.Likes))
 	}
 
-	rg.GET("/stories", middleware.Auth(d.JWTSecret), handlers.GetAllStories(d.Models.Stories))
+	rg.GET("/story/following", middleware.Auth(d.JWTSecret), handlers.GetAllStories(d.Models.Stories))
 }

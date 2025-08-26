@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
+	"os"
 	"strings"
+	"time"
 
 	"modern-social-media/internal/models"
 	"modern-social-media/internal/repository"
@@ -82,12 +85,30 @@ func GetStoriesByUserId(storyRepo repository.StoryRepository) gin.HandlerFunc {
 
 func CreateStory(storyRepo repository.StoryRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req struct {
-			ContentURL string `json:"content_url" binding:"required"`
+		file, err := c.FormFile("media")
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "media file is required"})
+			return
 		}
 
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		contentType := file.Header.Get("Content-Type")
+		var mediaType string
+		var maxSize int64
+
+		if strings.HasPrefix(contentType, "image/") {
+			mediaType = "image"
+			maxSize = 100 * 1024 * 1024
+		} else if strings.HasPrefix(contentType, "video/") {
+			mediaType = "video"
+			maxSize = 100 * 1024 * 1024
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "only image and video files are allowed"})
+			return
+		}
+
+		if file.Size > maxSize {
+			maxSizeMB := maxSize / (1024 * 1024)
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("file size must be less than %dMB", maxSizeMB)})
 			return
 		}
 
@@ -97,10 +118,23 @@ func CreateStory(storyRepo repository.StoryRepository) gin.HandlerFunc {
 			return
 		}
 		userID := uidAny.(string)
+		filename := fmt.Sprintf("%s_%d_%s", userID, time.Now().Unix(), file.Filename)
+		uploadPath := fmt.Sprintf("uploads/stories/%s", filename)
+
+		if err := os.MkdirAll("uploads/stories", 0755); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create upload directory"})
+			return
+		}
+
+		if err := c.SaveUploadedFile(file, uploadPath); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save file"})
+			return
+		}
 
 		story := &models.Story{
-			UserID:     userID,
-			ContentURL: req.ContentURL,
+			UserID:    userID,
+			MediaURL:  "/" + uploadPath,
+			MediaType: mediaType,
 		}
 
 		if err := storyRepo.CreateStory(c.Request.Context(), story); err != nil {
@@ -126,12 +160,30 @@ func UpdateStory(storyRepo repository.StoryRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 
-		var req struct {
-			ContentURL string `json:"content_url" binding:"required"`
+		file, err := c.FormFile("media")
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "media file is required"})
+			return
 		}
 
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		contentType := file.Header.Get("Content-Type")
+		var mediaType string
+		var maxSize int64
+
+		if strings.HasPrefix(contentType, "image/") {
+			mediaType = "image"
+			maxSize = 100 * 1024 * 1024
+		} else if strings.HasPrefix(contentType, "video/") {
+			mediaType = "video"
+			maxSize = 100 * 1024 * 1024
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "only image and video files are allowed"})
+			return
+		}
+
+		if file.Size > maxSize {
+			maxSizeMB := maxSize / (1024 * 1024)
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("file size must be less than %dMB", maxSizeMB)})
 			return
 		}
 
@@ -142,8 +194,22 @@ func UpdateStory(storyRepo repository.StoryRepository) gin.HandlerFunc {
 		}
 		userID := uidAny.(string)
 
+		filename := fmt.Sprintf("%s_%d_%s", userID, time.Now().Unix(), file.Filename)
+		uploadPath := fmt.Sprintf("uploads/stories/%s", filename)
+
+		if err := os.MkdirAll("uploads/stories", 0755); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create upload directory"})
+			return
+		}
+
+		if err := c.SaveUploadedFile(file, uploadPath); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save file"})
+			return
+		}
+
 		story := &models.Story{
-			ContentURL: req.ContentURL,
+			MediaURL:  "/" + uploadPath,
+			MediaType: mediaType,
 		}
 
 		if err := storyRepo.UpdateStoryByUser(c.Request.Context(), id, userID, story); err != nil {

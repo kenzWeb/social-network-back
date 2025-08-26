@@ -67,12 +67,11 @@ func (r StoryRepository) GetStoriesFromFollowing(ctx context.Context, userID str
 	var stories []models.Story
 	timeLimit := time.Now().Add(-24 * time.Hour)
 
-	query := r.db.WithContext(ctx).
+	if err := r.db.WithContext(ctx).
 		Preload("User").
-		Joins("JOIN follows f ON f.following_id = stories.user_id").
-		Where("f.follower_id = ? AND stories.created_at > ?", userID, timeLimit)
-
-	if err := query.Order("stories.created_at DESC").Find(&stories).Error; err != nil {
+		Where("user_id IN (SELECT following_id FROM follows WHERE follower_id = ?) AND created_at > ?", userID, timeLimit).
+		Order("created_at DESC").
+		Find(&stories).Error; err != nil {
 		return nil, err
 	}
 	return stories, nil
@@ -89,7 +88,8 @@ func (r StoryRepository) UpdateStoryByUser(ctx context.Context, storyID, userID 
 		return err
 	}
 
-	existingStory.ContentURL = story.ContentURL
+	existingStory.MediaURL = story.MediaURL
+	existingStory.MediaType = story.MediaType
 	return r.db.WithContext(ctx).Save(&existingStory).Error
 }
 
