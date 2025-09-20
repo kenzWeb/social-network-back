@@ -4,6 +4,8 @@ import (
 	introutes "modern-social-media/internal/routes"
 	"net/http"
 
+	"modern-social-media/internal/handlers"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -28,6 +30,9 @@ func (app *application) routes() http.Handler {
 	introutes.RegisterCommentsRoutes(v1, deps)
 	introutes.RegisterStoryRoutes(v1, deps)
 	introutes.RegisterFollowRoutes(v1, deps)
+
+	hub := handlers.NewHub()
+	introutes.RegisterChatRoutes(v1, deps, hub)
 
 	return g
 }

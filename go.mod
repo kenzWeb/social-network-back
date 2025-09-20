@@ -5,10 +5,12 @@ go 1.25
 require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-gonic/gin v1.10.1
+	github.com/gorilla/websocket v1.5.1
 	github.com/joho/godotenv v1.5.1
 	github.com/lucsky/cuid v1.2.1
 	golang.org/x/crypto v0.41.0
 	gorm.io/driver/postgres v1.6.0
+	gorm.io/driver/sqlite v1.5.7
 	gorm.io/gorm v1.30.1
 )
 

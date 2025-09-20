@@ -20,6 +20,10 @@ func MigrateDatabase(db *gorm.DB) error {
 		&models.Comment{},
 		&models.Follow{},
 		&models.VerificationCode{},
+		&models.Conversation{},
+		&models.ConversationParticipant{},
+		&models.Message{},
+		&models.Skill{},
 	)
 	if err != nil {
 		return err
@@ -68,6 +72,17 @@ func createIndexes(db *gorm.DB) error {
 		return err
 	}
 	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_follows_following_id ON follows(following_id)").Error; err != nil {
+		return err
+	}
+
+	// Chat indexes
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_conv_participants_user ON conversation_participants(user_id)").Error; err != nil {
+		return err
+	}
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id)").Error; err != nil {
+		return err
+	}
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at DESC)").Error; err != nil {
 		return err
 	}
 

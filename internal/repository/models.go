@@ -11,6 +11,8 @@ type Models struct {
 	Likes             LikeRepository
 	Follows           FollowRepository
 	Stories           StoryRepository
+	Chat              ChatRepository
+	Skills            SkillRepository
 }
 
 func NewModels(db *gorm.DB) *Models {
@@ -23,5 +25,7 @@ func NewModels(db *gorm.DB) *Models {
 		Likes:             LikeRepository{db: db},
 		Follows:           FollowRepository{db: db},
 		Stories:           StoryRepository{db: db},
+		Chat:              NewChatRepository(db),
+		Skills:            SkillRepository{db: db},
 	}
 }
