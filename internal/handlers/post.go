@@ -37,13 +37,13 @@ func CreatePost(postRepo repository.PostRepository) gin.HandlerFunc {
 			ImageURL string `json:"imageUrl"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 
 			return
 		}
 
 		if req.Content == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "content is required"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Content is required"})
 			return
 		}
 
@@ -87,13 +87,13 @@ func UpdatePost(postRepo repository.PostRepository) gin.HandlerFunc {
 			ImageURL string `json:"imageUrl"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 
 			return
 		}
 
 		if req.Content == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "content is required"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Content is required"})
 			return
 		}
 
@@ -113,7 +113,7 @@ func UpdatePost(postRepo repository.PostRepository) gin.HandlerFunc {
 
 		if err := postRepo.UpdatePostByUser(c.Request.Context(), id, userID, post); err != nil {
 			if strings.Contains(strings.ToLower(err.Error()), "record not found") {
-				c.JSON(http.StatusNotFound, gin.H{"error": "post not found"})
+				c.JSON(http.StatusNotFound, gin.H{"error": "Post not found"})
 				return
 			}
 			if strings.Contains(err.Error(), "SQLSTATE 23503") {
@@ -146,7 +146,7 @@ func DeletePostByUser(postRepo repository.PostRepository) gin.HandlerFunc {
 
 		if err := postRepo.DeletePostByUser(c.Request.Context(), id, userID); err != nil {
 			if strings.Contains(strings.ToLower(err.Error()), "record not found") {
-				c.JSON(http.StatusNotFound, gin.H{"error": "post not found"})
+				c.JSON(http.StatusNotFound, gin.H{"error": "Post not found"})
 				return
 			}
 			if strings.Contains(err.Error(), "SQLSTATE 23503") {

@@ -3,15 +3,26 @@ package main
 import (
 	introutes "modern-social-media/internal/routes"
 	"net/http"
+	"time"
 
 	"modern-social-media/internal/handlers"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
 func (app *application) routes() http.Handler {
 	g := gin.New()
 	g.Use(gin.Logger(), gin.Recovery())
+
+	g.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length", "Content-Type"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 
 	g.Static("/uploads", "./uploads")
 

@@ -35,17 +35,17 @@ func Register(usersRepo repository.UserRepository, codesRepo repository.Verifica
 		}
 
 		if u, err := usersRepo.GetByEmail(c.Request.Context(), req.Email); err == nil && u != nil {
-			c.JSON(http.StatusConflict, gin.H{"error": "email already in use"})
+			c.JSON(http.StatusConflict, gin.H{"error": "Email already in use"})
 			return
 		} else if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to check email"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check email"})
 			return
 		}
 		if u, err := usersRepo.GetByUsername(c.Request.Context(), req.Username); err == nil && u != nil {
-			c.JSON(http.StatusConflict, gin.H{"error": "username already in use"})
+			c.JSON(http.StatusConflict, gin.H{"error": "Username already in use"})
 			return
 		} else if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to check username"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check username"})
 			return
 		}
 
@@ -58,13 +58,13 @@ func Register(usersRepo repository.UserRepository, codesRepo repository.Verifica
 		}
 		hashed, err := auth.HashPassword(req.Password)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to hash password"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
 			return
 		}
 		user.Password = hashed
 		if err := usersRepo.CreateUser(c.Request.Context(), user); err != nil {
 			if strings.Contains(err.Error(), "SQLSTATE 23505") {
-				c.JSON(http.StatusConflict, gin.H{"error": "email or username already exists"})
+				c.JSON(http.StatusConflict, gin.H{"error": "Email or username already exists"})
 				return
 			}
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -79,7 +79,7 @@ func Register(usersRepo repository.UserRepository, codesRepo repository.Verifica
 			ExpiresAt: time.Now().Add(30 * time.Minute),
 		}
 		if err := codesRepo.Create(c.Request.Context(), v); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create verification code"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create verification code"})
 			return
 		}
 		log.Printf("[auth] Sent email verify code to %s (user=%s)", user.Email, user.ID)
@@ -99,23 +99,23 @@ func Login(usersRepo repository.UserRepository, codesRepo repository.Verificatio
 			Password string `json:"password"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 			return
 		}
 
 		user, err := usersRepo.GetByEmail(c.Request.Context(), req.Email)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 			return
 		}
 		ok, err := auth.VerifyPassword(user.Password, req.Password)
 		if err != nil || !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 			return
 		}
 
 		if !user.IsVerified {
-			c.JSON(http.StatusForbidden, gin.H{"error": "email not verified", "action": "verify_email"})
+			c.JSON(http.StatusForbidden, gin.H{"error": "Email not verified", "action": "verify_email"})
 			return
 		}
 
@@ -127,12 +127,12 @@ func Login(usersRepo repository.UserRepository, codesRepo repository.Verificatio
 
 		token, err := createAccessJWT(jwtSecret, user)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to sign token"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sign token"})
 			return
 		}
 		refresh, err := createRefreshJWT(jwtSecret, user)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to sign refresh token"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sign refresh token"})
 			return
 		}
 		setRefreshCookie(c, refresh)
@@ -180,7 +180,7 @@ func Refresh(jwtSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		cookie, err := c.Cookie("refresh_token")
 		if err != nil || cookie == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "missing refresh token"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing refresh token"})
 			return
 		}
 		parsed, err := jwt.Parse(cookie, func(t *jwt.Token) (interface{}, error) {
@@ -190,12 +190,12 @@ func Refresh(jwtSecret string) gin.HandlerFunc {
 			return []byte(jwtSecret), nil
 		})
 		if err != nil || !parsed.Valid {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid refresh token"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
 			return
 		}
 		claims, ok := parsed.Claims.(jwt.MapClaims)
 		if !ok || claims["type"] != "refresh" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token type"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token type"})
 			return
 		}
 		sub, _ := claims["sub"].(string)
@@ -208,7 +208,7 @@ func Refresh(jwtSecret string) gin.HandlerFunc {
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, accClaims)
 		signed, err := token.SignedString([]byte(jwtSecret))
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to sign token"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sign token"})
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"token": signed})
@@ -222,23 +222,23 @@ func VerifyEmail(usersRepo repository.UserRepository, codesRepo repository.Verif
 			Code  string `json:"code"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 			return
 		}
 		user, err := usersRepo.GetByEmail(c.Request.Context(), req.Email)
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 			return
 		}
 		v, err := codesRepo.GetValid(c.Request.Context(), user.ID, "email_verify", req.Code)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired code"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired code"})
 			return
 		}
 		_ = codesRepo.Consume(c.Request.Context(), v.ID)
 		user.IsVerified = true
 		if err := usersRepo.UpdateUser(c.Request.Context(), user); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update user"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"status": "verified"})
@@ -251,16 +251,16 @@ func ResendVerificationEmail(usersRepo repository.UserRepository, codesRepo repo
 			Email string `json:"email"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 			return
 		}
 		user, err := usersRepo.GetByEmail(c.Request.Context(), req.Email)
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 			return
 		}
 		if user.IsVerified {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "already verified"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Already verified"})
 			return
 		}
 		code := generateCode(6)
@@ -271,7 +271,7 @@ func ResendVerificationEmail(usersRepo repository.UserRepository, codesRepo repo
 			ExpiresAt: time.Now().Add(30 * time.Minute),
 		}
 		if err := codesRepo.Create(c.Request.Context(), v); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create verification code"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create verification code"})
 			return
 		}
 		log.Printf("[auth] Resent email verify code to %s (user=%s)", user.Email, user.ID)
@@ -287,12 +287,12 @@ func VerifyLogin2FA(usersRepo repository.UserRepository, codesRepo repository.Ve
 			Code  string `json:"code"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 			return
 		}
 		user, err := usersRepo.GetByEmail(c.Request.Context(), req.Email)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 			return
 		}
 		if !user.Is2FAEnabled {
@@ -301,19 +301,19 @@ func VerifyLogin2FA(usersRepo repository.UserRepository, codesRepo repository.Ve
 		}
 		v, err := codesRepo.GetValid(c.Request.Context(), user.ID, "login_2fa", req.Code)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired 2fa code"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired 2fa code"})
 			return
 		}
 		_ = codesRepo.Consume(c.Request.Context(), v.ID)
 
 		token, err := createAccessJWT(jwtSecret, user)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to sign token"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sign token"})
 			return
 		}
 		refresh, err := createRefreshJWT(jwtSecret, user)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to sign refresh token"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sign refresh token"})
 			return
 		}
 		setRefreshCookie(c, refresh)
@@ -327,7 +327,7 @@ func Request2FACode(usersRepo repository.UserRepository, codesRepo repository.Ve
 			Email string `json:"email"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 			return
 		}
 		if !email2FAEnabled {
@@ -336,11 +336,11 @@ func Request2FACode(usersRepo repository.UserRepository, codesRepo repository.Ve
 		}
 		user, err := usersRepo.GetByEmail(c.Request.Context(), req.Email)
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 			return
 		}
 		if !user.IsVerified {
-			c.JSON(http.StatusForbidden, gin.H{"error": "email not verified"})
+			c.JSON(http.StatusForbidden, gin.H{"error": "Email not verified"})
 			return
 		}
 		if !user.Is2FAEnabled {
@@ -355,11 +355,11 @@ func Request2FACode(usersRepo repository.UserRepository, codesRepo repository.Ve
 			ExpiresAt: time.Now().Add(10 * time.Minute),
 		}
 		if err := codesRepo.Create(c.Request.Context(), v); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create 2fa code"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create 2fa code"})
 			return
 		}
 		log.Printf("[auth] Sent 2FA login code to %s (user=%s, email2FAEnabled=%v, is2FAEnabled=%v)", user.Email, user.ID, email2FAEnabled, user.Is2FAEnabled)
-		_ = mail.Send(user.Email, "Код входа", fmt.Sprintf("Ваш код входа: %s", code))
+		_ = mail.Send(user.Email, "Код входа", fmt.Sprintf("Your code: %s", code))
 		c.JSON(http.StatusOK, gin.H{"status": "sent"})
 	}
 }
@@ -379,28 +379,28 @@ func Toggle2FA(usersRepo repository.UserRepository, jwtSecret string) gin.Handle
 			Enable bool `json:"enable"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 			return
 		}
 		authz := c.GetHeader("Authorization")
 		if !strings.HasPrefix(authz, "Bearer ") {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "missing bearer token"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing bearer token"})
 			return
 		}
 		tokenStr := strings.TrimPrefix(authz, "Bearer ")
 		parsed, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
 			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, errors.New("unexpected signing method")
+				return nil, errors.New("Unexpected signing method")
 			}
 			return []byte(jwtSecret), nil
 		})
 		if err != nil || !parsed.Valid {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			return
 		}
 		claims, ok := parsed.Claims.(jwt.MapClaims)
 		if !ok || claims["type"] != "access" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			return
 		}
 		sub, _ := claims["sub"].(string)
@@ -411,7 +411,7 @@ func Toggle2FA(usersRepo repository.UserRepository, jwtSecret string) gin.Handle
 		}
 		user.Is2FAEnabled = req.Enable
 		if err := usersRepo.UpdateUser(c.Request.Context(), user); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update user"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"is_2fa_enabled": user.Is2FAEnabled})

@@ -124,7 +124,7 @@ func GetFollowCounts(repo repository.FollowRepository) gin.HandlerFunc {
 		followers, err1 := repo.CountFollowers(c.Request.Context(), uid)
 		following, err2 := repo.CountFollowing(c.Request.Context(), uid)
 		if err1 != nil || err2 != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get counts"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get counts"})
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"followers": followers, "following": following})

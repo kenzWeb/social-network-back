@@ -14,16 +14,16 @@ func GetCommentsByPost(commentRepo repository.CommentRepository) gin.HandlerFunc
 	return func(c *gin.Context) {
 		postID := c.Param("id")
 		if postID == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "post id is required"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Post id is required"})
 			return
 		}
 		comments, err := commentRepo.GetCommentsByPost(c.Request.Context(), postID)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				c.JSON(http.StatusNotFound, gin.H{"error": "post not found"})
+				c.JSON(http.StatusNotFound, gin.H{"error": "Post not found"})
 				return
 			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve comments"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve comments"})
 			return
 		}
 		c.JSON(http.StatusOK, comments)
@@ -34,16 +34,16 @@ func GetCommentById(commentRepo repository.CommentRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		commentID := c.Param("id")
 		if commentID == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "comment id is required"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Comment id is required"})
 			return
 		}
 		comment, err := commentRepo.GetCommentById(c.Request.Context(), commentID)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				c.JSON(http.StatusNotFound, gin.H{"error": "comment not found"})
+				c.JSON(http.StatusNotFound, gin.H{"error": "Comment not found"})
 				return
 			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve comment"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve comment"})
 			return
 		}
 		c.JSON(http.StatusOK, comment)
@@ -61,7 +61,7 @@ func GetCommentsByUser(commentRepo repository.CommentRepository) gin.HandlerFunc
 
 		comments, err := commentRepo.GetCommentsByUser(c.Request.Context(), userID)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve comments"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve comments"})
 			return
 		}
 		c.JSON(http.StatusOK, comments)
@@ -88,7 +88,7 @@ func CreateComment(commentRepo repository.CommentRepository) gin.HandlerFunc {
 
 		postID := c.Param("id")
 		if postID == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "post id is required"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Post id is required"})
 			return
 		}
 		comment := &models.Comment{
@@ -99,10 +99,10 @@ func CreateComment(commentRepo repository.CommentRepository) gin.HandlerFunc {
 
 		if err := commentRepo.CreateComment(c.Request.Context(), comment); err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				c.JSON(http.StatusNotFound, gin.H{"error": "post not found"})
+				c.JSON(http.StatusNotFound, gin.H{"error": "Post not found"})
 				return
 			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create comment"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create comment"})
 			return
 		}
 

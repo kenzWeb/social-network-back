@@ -39,7 +39,7 @@ func GetStoryById(storyRepo repository.StoryRepository) gin.HandlerFunc {
 		story, err := storyRepo.GetById(c.Request.Context(), id)
 		if err != nil {
 			if strings.Contains(strings.ToLower(err.Error()), "record not found") {
-				c.JSON(http.StatusNotFound, gin.H{"error": "story not found"})
+				c.JSON(http.StatusNotFound, gin.H{"error": "Story not found"})
 				return
 			}
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -87,7 +87,7 @@ func CreateStory(storyRepo repository.StoryRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		file, err := c.FormFile("media")
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "media file is required"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Media file is required"})
 			return
 		}
 
@@ -102,13 +102,13 @@ func CreateStory(storyRepo repository.StoryRepository) gin.HandlerFunc {
 			mediaType = "video"
 			maxSize = 100 * 1024 * 1024
 		} else {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "only image and video files are allowed"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Only image and video files are allowed"})
 			return
 		}
 
 		if file.Size > maxSize {
 			maxSizeMB := maxSize / (1024 * 1024)
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("file size must be less than %dMB", maxSizeMB)})
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("File size must be less than %dMB", maxSizeMB)})
 			return
 		}
 
@@ -122,12 +122,12 @@ func CreateStory(storyRepo repository.StoryRepository) gin.HandlerFunc {
 		uploadPath := fmt.Sprintf("uploads/stories/%s", filename)
 
 		if err := os.MkdirAll("uploads/stories", 0755); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create upload directory"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create upload directory"})
 			return
 		}
 
 		if err := c.SaveUploadedFile(file, uploadPath); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save file"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
 			return
 		}
 
@@ -162,7 +162,7 @@ func UpdateStory(storyRepo repository.StoryRepository) gin.HandlerFunc {
 
 		file, err := c.FormFile("media")
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "media file is required"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Media file is required"})
 			return
 		}
 
@@ -177,13 +177,13 @@ func UpdateStory(storyRepo repository.StoryRepository) gin.HandlerFunc {
 			mediaType = "video"
 			maxSize = 100 * 1024 * 1024
 		} else {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "only image and video files are allowed"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Only image and video files are allowed"})
 			return
 		}
 
 		if file.Size > maxSize {
 			maxSizeMB := maxSize / (1024 * 1024)
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("file size must be less than %dMB", maxSizeMB)})
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("File size must be less than %dMB", maxSizeMB)})
 			return
 		}
 
@@ -198,12 +198,12 @@ func UpdateStory(storyRepo repository.StoryRepository) gin.HandlerFunc {
 		uploadPath := fmt.Sprintf("uploads/stories/%s", filename)
 
 		if err := os.MkdirAll("uploads/stories", 0755); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create upload directory"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create upload directory"})
 			return
 		}
 
 		if err := c.SaveUploadedFile(file, uploadPath); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save file"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
 			return
 		}
 
@@ -214,7 +214,7 @@ func UpdateStory(storyRepo repository.StoryRepository) gin.HandlerFunc {
 
 		if err := storyRepo.UpdateStoryByUser(c.Request.Context(), id, userID, story); err != nil {
 			if strings.Contains(strings.ToLower(err.Error()), "record not found") {
-				c.JSON(http.StatusNotFound, gin.H{"error": "story not found"})
+				c.JSON(http.StatusNotFound, gin.H{"error": "Story not found"})
 				return
 			}
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -244,7 +244,7 @@ func DeleteStory(storyRepo repository.StoryRepository) gin.HandlerFunc {
 
 		if err := storyRepo.DeleteStoryByUser(c.Request.Context(), id, userID); err != nil {
 			if strings.Contains(strings.ToLower(err.Error()), "record not found") {
-				c.JSON(http.StatusNotFound, gin.H{"error": "story not found"})
+				c.JSON(http.StatusNotFound, gin.H{"error": "Story not found"})
 				return
 			}
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

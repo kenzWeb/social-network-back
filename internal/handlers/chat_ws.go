@@ -177,20 +177,17 @@ func reader(ctx *gin.Context, deps ChatWSDeps, cn *connection) {
 		case "typing":
 			var p WSTypingPayload
 			if json.Unmarshal(evt.Data, &p) == nil {
-				// broadcast only to the other participants of the conversation
 				others := getConversationPeers(ctx, deps.Models, p.ConversationID, cn.userID)
 				deps.Hub.broadcastToUsers(others, WSEvent{Type: "typing", Data: mustJSON(gin.H{"conversation_id": p.ConversationID, "user_id": cn.userID, "is_typing": p.IsTyping})})
 			}
 		case "message":
 			var p WSMessagePayload
 			if json.Unmarshal(evt.Data, &p) == nil && p.Body != "" {
-				// Save message
 				msg := &imodels.Message{ConversationID: p.ConversationID, SenderID: cn.userID, Body: p.Body}
 				if err := deps.Models.Chat.CreateMessage(ctx.Request.Context(), msg); err != nil {
 					deps.Hub.sendToUser(cn.userID, WSEvent{Type: "error", Data: mustJSON(gin.H{"error": "save_failed"})})
 					continue
 				}
-				// Broadcast to peers including self
 				peers := getConversationPeers(ctx, deps.Models, p.ConversationID, "")
 				deps.Hub.broadcastToUsers(peers, WSEvent{Type: "message", Data: mustJSON(gin.H{"conversation_id": p.ConversationID, "sender_id": cn.userID, "body": p.Body, "created_at": time.Now().Unix()})})
 			}

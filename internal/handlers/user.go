@@ -15,7 +15,7 @@ func GetAllUsers(usersRepo repository.UserRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		users, err := usersRepo.GetAll(c.Request.Context())
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch users"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
 			return
 		}
 		c.JSON(http.StatusOK, users)
@@ -56,13 +56,13 @@ func CreateUser(usersRepo repository.UserRepository) gin.HandlerFunc {
 			LastName  string `json:"last_name"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 			return
 		}
 
 		hashed, err := auth.HashPassword(req.Password)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to hash password"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
 			return
 		}
 
@@ -88,7 +88,7 @@ func UpdateUser(usersRepo repository.UserRepository) gin.HandlerFunc {
 		id := c.Param("id")
 		existing, err := usersRepo.GetByID(c.Request.Context(), id)
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 			return
 		}
 
@@ -112,7 +112,7 @@ func UpdateUser(usersRepo repository.UserRepository) gin.HandlerFunc {
 		if req.Password != nil {
 			hashed, err := auth.HashPassword(*req.Password)
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to hash password"})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
 				return
 			}
 			existing.Password = hashed
@@ -134,7 +134,7 @@ func DeleteUser(userRepo repository.UserRepository) gin.HandlerFunc {
 		id := c.Param("id")
 
 		if err := userRepo.Delete(c.Request.Context(), id); err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 			return
 		}
 

@@ -31,12 +31,12 @@ func AddSkill(skillRepo repository.SkillRepository) gin.HandlerFunc {
 			Name string `json:"name"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil || req.Name == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 			return
 		}
 
 		if req.Name == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "skill name is required"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Skill name is required"})
 			return
 		}
 
@@ -53,7 +53,7 @@ func AddSkill(skillRepo repository.SkillRepository) gin.HandlerFunc {
 		}
 
 		if err := skillRepo.AddSkill(c.Request.Context(), skill); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to add skill"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add skill"})
 			return
 		}
 	}
