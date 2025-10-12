@@ -38,3 +38,9 @@ func (r VerificationCodeRepository) Consume(ctx context.Context, id string) erro
 func (r VerificationCodeRepository) DeleteExpired(ctx context.Context) error {
 	return r.db.WithContext(ctx).Where("expires_at <= NOW() OR consumed_at IS NOT NULL").Delete(&models.VerificationCode{}).Error
 }
+
+func (r VerificationCodeRepository) DeleteByUserAndPurpose(ctx context.Context, userID, purpose string) error {
+	return r.db.WithContext(ctx).
+		Where("user_id = ? AND purpose = ?", userID, purpose).
+		Delete(&models.VerificationCode{}).Error
+}

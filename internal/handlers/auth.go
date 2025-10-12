@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/big"
 	"net/http"
+	netmail "net/mail"
 	"strings"
 	"time"
 
@@ -34,41 +35,123 @@ func Register(usersRepo repository.UserRepository, codesRepo repository.Verifica
 			return
 		}
 
-		if u, err := usersRepo.GetByEmail(c.Request.Context(), req.Email); err == nil && u != nil {
-			c.JSON(http.StatusConflict, gin.H{"error": "Email already in use"})
-			return
-		} else if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check email"})
+		req.Username = strings.TrimSpace(req.Username)
+		req.Email = strings.TrimSpace(req.Email)
+		req.Password = strings.TrimSpace(req.Password)
+		req.FirstName = strings.TrimSpace(req.FirstName)
+		req.LastName = strings.TrimSpace(req.LastName)
+
+		normalizedEmail := strings.ToLower(req.Email)
+
+		if req.Username == "" || normalizedEmail == "" || req.Password == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "missing required fields"})
 			return
 		}
-		if u, err := usersRepo.GetByUsername(c.Request.Context(), req.Username); err == nil && u != nil {
-			c.JSON(http.StatusConflict, gin.H{"error": "Username already in use"})
+		if !isValidEmail(normalizedEmail) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid email"})
 			return
-		} else if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		}
+		if len(req.Password) < 8 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "password must be at least 8 characters"})
+			return
+		}
+
+		ctx := c.Request.Context()
+
+		existingByEmail, err := usersRepo.GetByEmail(ctx, normalizedEmail)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				existingByEmail = nil
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check email"})
+				return
+			}
+		}
+
+		var existingByUsername *models.User
+		if u, err := usersRepo.GetByUsername(ctx, req.Username); err == nil {
+			existingByUsername = u
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check username"})
 			return
 		}
 
-		user := &models.User{
-			Username:  req.Username,
-			Email:     req.Email,
-			Password:  "",
-			FirstName: req.FirstName,
-			LastName:  req.LastName,
-		}
 		hashed, err := auth.HashPassword(req.Password)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
 			return
 		}
-		user.Password = hashed
-		if err := usersRepo.CreateUser(c.Request.Context(), user); err != nil {
-			if strings.Contains(err.Error(), "SQLSTATE 23505") {
-				c.JSON(http.StatusConflict, gin.H{"error": "Email or username already exists"})
+
+		reusePending := func(target *models.User) (*models.User, error) {
+			target.Username = req.Username
+			target.Email = normalizedEmail
+			target.FirstName = req.FirstName
+			target.LastName = req.LastName
+			target.Password = hashed
+			target.IsVerified = false
+			target.IsActive = true
+			if err := usersRepo.UpdateUser(ctx, target); err != nil {
+				return nil, err
+			}
+			if err := codesRepo.DeleteByUserAndPurpose(ctx, target.ID, "email_verify"); err != nil {
+				return nil, err
+			}
+			return target, nil
+		}
+
+		var user *models.User
+
+		if existingByEmail != nil {
+			if existingByEmail.IsVerified {
+				c.JSON(http.StatusConflict, gin.H{"error": "Email already in use"})
 				return
 			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
+			if existingByUsername != nil && existingByUsername.ID != existingByEmail.ID {
+				c.JSON(http.StatusConflict, gin.H{"error": "Username already in use"})
+				return
+			}
+			user, err = reusePending(existingByEmail)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reset existing account"})
+				return
+			}
+		} else {
+			if existingByUsername != nil {
+				if existingByUsername.IsVerified || strings.ToLower(existingByUsername.Email) != normalizedEmail {
+					c.JSON(http.StatusConflict, gin.H{"error": "Username already in use"})
+					return
+				}
+				user, err = reusePending(existingByUsername)
+				if err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reset existing account"})
+					return
+				}
+			} else {
+				user = &models.User{
+					Username:  req.Username,
+					Email:     normalizedEmail,
+					Password:  hashed,
+					FirstName: req.FirstName,
+					LastName:  req.LastName,
+				}
+				if err := usersRepo.CreateUser(ctx, user); err != nil {
+					if isUniqueViolation(err) {
+						if existing, lookupErr := usersRepo.GetByEmail(ctx, normalizedEmail); lookupErr == nil && existing != nil && !existing.IsVerified {
+							user, err = reusePending(existing)
+							if err != nil {
+								c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reset existing account"})
+								return
+							}
+						} else {
+							c.JSON(http.StatusConflict, gin.H{"error": "Email or username already exists"})
+							return
+						}
+					} else {
+						c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+						return
+					}
+				}
+			}
 		}
 
 		code := generateCode(6)
@@ -78,7 +161,7 @@ func Register(usersRepo repository.UserRepository, codesRepo repository.Verifica
 			Code:      code,
 			ExpiresAt: time.Now().Add(30 * time.Minute),
 		}
-		if err := codesRepo.Create(c.Request.Context(), v); err != nil {
+		if err := codesRepo.Create(ctx, v); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create verification code"})
 			return
 		}
@@ -103,11 +186,15 @@ func Login(usersRepo repository.UserRepository, codesRepo repository.Verificatio
 			return
 		}
 
-		user, err := usersRepo.GetByEmail(c.Request.Context(), req.Email)
+		req.Email = strings.TrimSpace(req.Email)
+		normalizedEmail := strings.ToLower(req.Email)
+
+		user, err := usersRepo.GetByEmail(c.Request.Context(), normalizedEmail)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 			return
 		}
+		req.Password = strings.TrimSpace(req.Password)
 		ok, err := auth.VerifyPassword(user.Password, req.Password)
 		if err != nil || !ok {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
@@ -225,7 +312,11 @@ func VerifyEmail(usersRepo repository.UserRepository, codesRepo repository.Verif
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 			return
 		}
-		user, err := usersRepo.GetByEmail(c.Request.Context(), req.Email)
+		req.Email = strings.TrimSpace(req.Email)
+		req.Code = strings.TrimSpace(req.Code)
+		normalizedEmail := strings.ToLower(req.Email)
+
+		user, err := usersRepo.GetByEmail(c.Request.Context(), normalizedEmail)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 			return
@@ -254,7 +345,10 @@ func ResendVerificationEmail(usersRepo repository.UserRepository, codesRepo repo
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 			return
 		}
-		user, err := usersRepo.GetByEmail(c.Request.Context(), req.Email)
+		req.Email = strings.TrimSpace(req.Email)
+		normalizedEmail := strings.ToLower(req.Email)
+
+		user, err := usersRepo.GetByEmail(c.Request.Context(), normalizedEmail)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 			return
@@ -263,6 +357,7 @@ func ResendVerificationEmail(usersRepo repository.UserRepository, codesRepo repo
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Already verified"})
 			return
 		}
+		_ = codesRepo.DeleteByUserAndPurpose(c.Request.Context(), user.ID, "email_verify")
 		code := generateCode(6)
 		v := &models.VerificationCode{
 			UserID:    user.ID,
@@ -290,7 +385,11 @@ func VerifyLogin2FA(usersRepo repository.UserRepository, codesRepo repository.Ve
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 			return
 		}
-		user, err := usersRepo.GetByEmail(c.Request.Context(), req.Email)
+		req.Email = strings.TrimSpace(req.Email)
+		req.Code = strings.TrimSpace(req.Code)
+		normalizedEmail := strings.ToLower(req.Email)
+
+		user, err := usersRepo.GetByEmail(c.Request.Context(), normalizedEmail)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 			return
@@ -334,7 +433,10 @@ func Request2FACode(usersRepo repository.UserRepository, codesRepo repository.Ve
 			c.JSON(http.StatusBadRequest, gin.H{"error": "2fa by email disabled"})
 			return
 		}
-		user, err := usersRepo.GetByEmail(c.Request.Context(), req.Email)
+		req.Email = strings.TrimSpace(req.Email)
+		normalizedEmail := strings.ToLower(req.Email)
+
+		user, err := usersRepo.GetByEmail(c.Request.Context(), normalizedEmail)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 			return
@@ -347,6 +449,7 @@ func Request2FACode(usersRepo repository.UserRepository, codesRepo repository.Ve
 			c.JSON(http.StatusBadRequest, gin.H{"error": "2fa not enabled"})
 			return
 		}
+		_ = codesRepo.DeleteByUserAndPurpose(c.Request.Context(), user.ID, "login_2fa")
 		code := generateCode(6)
 		v := &models.VerificationCode{
 			UserID:    user.ID,
@@ -373,6 +476,25 @@ func generateCode(length int) string {
 	return string(out)
 }
 
+func isUniqueViolation(err error) bool {
+	type sqlStateError interface {
+		SQLState() string
+	}
+	var stateErr sqlStateError
+	if errors.As(err, &stateErr) {
+		return stateErr.SQLState() == "23505"
+	}
+	return strings.Contains(err.Error(), "SQLSTATE 23505")
+}
+
+func isValidEmail(value string) bool {
+	if value == "" {
+		return false
+	}
+	_, err := netmail.ParseAddress(value)
+	return err == nil
+}
+
 func Toggle2FA(usersRepo repository.UserRepository, jwtSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req struct {
@@ -390,7 +512,7 @@ func Toggle2FA(usersRepo repository.UserRepository, jwtSecret string) gin.Handle
 		tokenStr := strings.TrimPrefix(authz, "Bearer ")
 		parsed, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
 			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, errors.New("Unexpected signing method")
+				return nil, errors.New("unexpected signing method")
 			}
 			return []byte(jwtSecret), nil
 		})
