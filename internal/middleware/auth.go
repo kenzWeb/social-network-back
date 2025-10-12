@@ -48,7 +48,7 @@ func Auth(jwtSecret string) gin.HandlerFunc {
 func StaticToken(required string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if required == "" {
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "admin token not configured"})
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "forbidden"})
 			return
 		}
 		token := c.GetHeader("X-Admin-Token")

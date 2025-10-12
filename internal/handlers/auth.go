@@ -11,11 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 
-	"modern-social-media/internal/auth"
 	"modern-social-media/internal/models"
 	"modern-social-media/internal/repository"
 	"modern-social-media/internal/services"
@@ -35,143 +33,42 @@ func Register(usersRepo repository.UserRepository, codesRepo repository.Verifica
 			return
 		}
 
-		req.Username = strings.TrimSpace(req.Username)
-		req.Email = strings.TrimSpace(req.Email)
-		req.Password = strings.TrimSpace(req.Password)
-		req.FirstName = strings.TrimSpace(req.FirstName)
-		req.LastName = strings.TrimSpace(req.LastName)
-
-		normalizedEmail := strings.ToLower(req.Email)
-
-		if req.Username == "" || normalizedEmail == "" || req.Password == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "missing required fields"})
-			return
-		}
-		if !isValidEmail(normalizedEmail) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid email"})
-			return
-		}
-		if len(req.Password) < 8 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "password must be at least 8 characters"})
-			return
-		}
-
 		ctx := c.Request.Context()
+		svc := services.AuthService{
+			Users:           usersRepo,
+			Codes:           codesRepo,
+			Tokens:          nil,
+			Mailer:          mail,
+			Hasher:          services.Argon2Hasher{},
+			Clock:           services.RealClock{},
+			Transact:        services.NoopTxRunner{},
+			Email2FAEnabled: false,
+		}
 
-		existingByEmail, err := usersRepo.GetByEmail(ctx, normalizedEmail)
+		user, err := svc.Register(ctx, services.RegisterInput{
+			Username:  req.Username,
+			Email:     req.Email,
+			Password:  req.Password,
+			FirstName: req.FirstName,
+			LastName:  req.LastName,
+		})
 		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				existingByEmail = nil
-			} else {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check email"})
-				return
-			}
-		}
-
-		var existingByUsername *models.User
-		if u, err := usersRepo.GetByUsername(ctx, req.Username); err == nil {
-			existingByUsername = u
-		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check username"})
-			return
-		}
-
-		hashed, err := auth.HashPassword(req.Password)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
-			return
-		}
-
-		reusePending := func(target *models.User) (*models.User, error) {
-			target.Username = req.Username
-			target.Email = normalizedEmail
-			target.FirstName = req.FirstName
-			target.LastName = req.LastName
-			target.Password = hashed
-			target.IsVerified = false
-			target.IsActive = true
-			if err := usersRepo.UpdateUser(ctx, target); err != nil {
-				return nil, err
-			}
-			if err := codesRepo.DeleteByUserAndPurpose(ctx, target.ID, "email_verify"); err != nil {
-				return nil, err
-			}
-			return target, nil
-		}
-
-		var user *models.User
-
-		if existingByEmail != nil {
-			if existingByEmail.IsVerified {
+			if err.Error() == "email_in_use" {
 				c.JSON(http.StatusConflict, gin.H{"error": "Email already in use"})
 				return
 			}
-			if existingByUsername != nil && existingByUsername.ID != existingByEmail.ID {
+			if err.Error() == "username_in_use" {
 				c.JSON(http.StatusConflict, gin.H{"error": "Username already in use"})
 				return
 			}
-			user, err = reusePending(existingByEmail)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reset existing account"})
+			if err.Error() == "invalid_email" || err.Error() == "missing_required_fields" || err.Error() == "weak_password" {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 				return
 			}
-		} else {
-			if existingByUsername != nil {
-				if existingByUsername.IsVerified || strings.ToLower(existingByUsername.Email) != normalizedEmail {
-					c.JSON(http.StatusConflict, gin.H{"error": "Username already in use"})
-					return
-				}
-				user, err = reusePending(existingByUsername)
-				if err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reset existing account"})
-					return
-				}
-			} else {
-				user = &models.User{
-					Username:  req.Username,
-					Email:     normalizedEmail,
-					Password:  hashed,
-					FirstName: req.FirstName,
-					LastName:  req.LastName,
-				}
-				if err := usersRepo.CreateUser(ctx, user); err != nil {
-					if isUniqueViolation(err) {
-						if existing, lookupErr := usersRepo.GetByEmail(ctx, normalizedEmail); lookupErr == nil && existing != nil && !existing.IsVerified {
-							user, err = reusePending(existing)
-							if err != nil {
-								c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reset existing account"})
-								return
-							}
-						} else {
-							c.JSON(http.StatusConflict, gin.H{"error": "Email or username already exists"})
-							return
-						}
-					} else {
-						c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
-						return
-					}
-				}
-			}
-		}
-
-		code := generateCode(6)
-		v := &models.VerificationCode{
-			UserID:    user.ID,
-			Purpose:   "email_verify",
-			Code:      code,
-			ExpiresAt: time.Now().Add(30 * time.Minute),
-		}
-		if err := codesRepo.Create(ctx, v); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create verification code"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 			return
 		}
-		log.Printf("[auth] Sent email verify code to %s (user=%s)", user.Email, user.ID)
-		_ = mail.Send(user.Email, "Подтверждение почты", fmt.Sprintf("Ваш код подтверждения: %s", code))
-
-		c.JSON(http.StatusCreated, gin.H{
-			"message": "user created; verification code sent to email",
-			"user":    user,
-		})
+		c.JSON(http.StatusCreated, gin.H{"message": "user created; verification code sent to email", "user": user})
 	}
 }
 
@@ -186,44 +83,26 @@ func Login(usersRepo repository.UserRepository, codesRepo repository.Verificatio
 			return
 		}
 
-		req.Email = strings.TrimSpace(req.Email)
-		normalizedEmail := strings.ToLower(req.Email)
-
-		user, err := usersRepo.GetByEmail(c.Request.Context(), normalizedEmail)
+		svc := services.AuthService{Users: usersRepo, Codes: codesRepo, Tokens: &services.JWTTokenService{Secret: []byte(jwtSecret), AccessTTL: 15 * time.Minute, RefreshTTL: 14 * 24 * time.Hour}, Mailer: mail, Hasher: services.Argon2Hasher{}, Clock: services.RealClock{}, Transact: services.NoopTxRunner{}, Email2FAEnabled: email2FAEnabled}
+		tokens, err := svc.Login(c.Request.Context(), req.Email, req.Password)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
-			return
+			switch err.Error() {
+			case "invalid_credentials":
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+				return
+			case "email_not_verified":
+				c.JSON(http.StatusForbidden, gin.H{"error": "Email not verified", "action": "verify_email"})
+				return
+			case "2fa_required":
+				c.JSON(http.StatusOK, gin.H{"status": "2fa_required"})
+				return
+			default:
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to login"})
+				return
+			}
 		}
-		req.Password = strings.TrimSpace(req.Password)
-		ok, err := auth.VerifyPassword(user.Password, req.Password)
-		if err != nil || !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
-			return
-		}
-
-		if !user.IsVerified {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Email not verified", "action": "verify_email"})
-			return
-		}
-
-		if email2FAEnabled && user.Is2FAEnabled {
-			log.Printf("[auth] 2FA required for login (user=%s, email2FAEnabled=%v, is2FAEnabled=%v); no code sent automatically", user.ID, email2FAEnabled, user.Is2FAEnabled)
-			c.JSON(http.StatusOK, gin.H{"status": "2fa_required", "user_id": user.ID})
-			return
-		}
-
-		token, err := createAccessJWT(jwtSecret, user)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sign token"})
-			return
-		}
-		refresh, err := createRefreshJWT(jwtSecret, user)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sign refresh token"})
-			return
-		}
-		setRefreshCookie(c, refresh)
-		c.JSON(http.StatusOK, gin.H{"token": token, "user": user})
+		c.SetCookie("refresh_token", tokens.Refresh, int((14 * 24 * time.Hour).Seconds()), "/", "", true, true)
+		c.JSON(http.StatusOK, gin.H{"token": tokens.Access})
 	}
 }
 
@@ -312,23 +191,16 @@ func VerifyEmail(usersRepo repository.UserRepository, codesRepo repository.Verif
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 			return
 		}
-		req.Email = strings.TrimSpace(req.Email)
-		req.Code = strings.TrimSpace(req.Code)
-		normalizedEmail := strings.ToLower(req.Email)
-
-		user, err := usersRepo.GetByEmail(c.Request.Context(), normalizedEmail)
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-			return
-		}
-		v, err := codesRepo.GetValid(c.Request.Context(), user.ID, "email_verify", req.Code)
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired code"})
-			return
-		}
-		_ = codesRepo.Consume(c.Request.Context(), v.ID)
-		user.IsVerified = true
-		if err := usersRepo.UpdateUser(c.Request.Context(), user); err != nil {
+		svc := services.AuthService{Users: usersRepo, Codes: codesRepo, Mailer: nil, Hasher: services.Argon2Hasher{}, Clock: services.RealClock{}, Transact: services.NoopTxRunner{}}
+		if err := svc.VerifyEmail(c.Request.Context(), req.Email, req.Code); err != nil {
+			if err.Error() == "not_found" {
+				c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+				return
+			}
+			if err.Error() == "invalid_code" {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired code"})
+				return
+			}
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
 			return
 		}
@@ -345,9 +217,9 @@ func ResendVerificationEmail(usersRepo repository.UserRepository, codesRepo repo
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 			return
 		}
+		// простой перенос логики через сервис опустим — оставим текущую реализацию для стабильности
 		req.Email = strings.TrimSpace(req.Email)
 		normalizedEmail := strings.ToLower(req.Email)
-
 		user, err := usersRepo.GetByEmail(c.Request.Context(), normalizedEmail)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
@@ -359,12 +231,7 @@ func ResendVerificationEmail(usersRepo repository.UserRepository, codesRepo repo
 		}
 		_ = codesRepo.DeleteByUserAndPurpose(c.Request.Context(), user.ID, "email_verify")
 		code := generateCode(6)
-		v := &models.VerificationCode{
-			UserID:    user.ID,
-			Purpose:   "email_verify",
-			Code:      code,
-			ExpiresAt: time.Now().Add(30 * time.Minute),
-		}
+		v := &models.VerificationCode{UserID: user.ID, Purpose: "email_verify", Code: code, ExpiresAt: time.Now().Add(30 * time.Minute)}
 		if err := codesRepo.Create(c.Request.Context(), v); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create verification code"})
 			return
