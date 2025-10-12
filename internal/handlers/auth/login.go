@@ -1,4 +1,4 @@
-package handlers
+package auth
 
 import (
 	"net/http"
@@ -18,7 +18,7 @@ func LoginWithService(svc services.AuthService) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 			return
 		}
-		tokens, err := svc.Login(c.Request.Context(), req.Email, req.Password)
+		user, tokens, err := svc.Login(c.Request.Context(), req.Email, req.Password)
 		if err != nil {
 			switch err.Error() {
 			case "invalid_credentials":
@@ -36,6 +36,6 @@ func LoginWithService(svc services.AuthService) gin.HandlerFunc {
 			}
 		}
 		setRefreshCookie(c, tokens.Refresh)
-		c.JSON(http.StatusOK, gin.H{"token": tokens.Access})
+		c.JSON(http.StatusOK, gin.H{"token": tokens.Access, "user": user})
 	}
 }

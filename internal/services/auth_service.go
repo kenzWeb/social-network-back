@@ -159,32 +159,32 @@ func (s *AuthService) VerifyEmail(ctx context.Context, email, code string) error
 	return s.Users.UpdateUser(ctx, u)
 }
 
-func (s *AuthService) Login(ctx context.Context, email, password string) (*AuthTokens, error) {
+func (s *AuthService) Login(ctx context.Context, email, password string) (*models.User, *AuthTokens, error) {
 	email = utils.NormalizeEmail(email)
 	password = strings.TrimSpace(password)
 	u, err := s.Users.GetByEmail(ctx, email)
 	if err != nil {
-		return nil, errors.New("invalid_credentials")
+		return nil, nil, errors.New("invalid_credentials")
 	}
 	ok, err := s.Hasher.Verify(u.Password, password)
 	if err != nil || !ok {
-		return nil, errors.New("invalid_credentials")
+		return nil, nil, errors.New("invalid_credentials")
 	}
 	if !u.IsVerified {
-		return nil, errors.New("email_not_verified")
+		return nil, nil, errors.New("email_not_verified")
 	}
 	if s.Email2FAEnabled && u.Is2FAEnabled {
-		return nil, errors.New("2fa_required")
+		return nil, nil, errors.New("2fa_required")
 	}
 	access, err := s.Tokens.IssueAccess(u)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	refresh, err := s.Tokens.IssueRefresh(u)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return &AuthTokens{Access: access, Refresh: refresh}, nil
+	return u, &AuthTokens{Access: access, Refresh: refresh}, nil
 }
 
 func (s *AuthService) ResendVerificationEmail(ctx context.Context, email string) error {

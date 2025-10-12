@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"modern-social-media/internal/handlers"
+	authhandlers "modern-social-media/internal/handlers/auth"
 	"modern-social-media/internal/services"
 	"time"
 
@@ -21,12 +21,12 @@ func RegisterAuthRoutes(rg *gin.RouterGroup, d Deps) {
 		Email2FAEnabled: d.Email2FAEnabled,
 	}
 
-	rg.POST("/auth/register", handlers.RegisterWithService(svc))
-	rg.POST("/auth/login", handlers.LoginWithService(svc))
-	rg.POST("/auth/refresh", handlers.Refresh(d.JWTSecret))
-	rg.POST("/auth/verify-email", handlers.VerifyEmailWithService(svc))
-	rg.POST("/auth/resend-verify-email", handlers.ResendVerificationEmailWithService(svc))
-	rg.POST("/auth/2fa/verify", handlers.VerifyLogin2FAWithService(svc))
-	rg.POST("/auth/2fa/request", handlers.Request2FACodeWithService(svc))
-	rg.POST("/auth/toggle-2fa", handlers.Toggle2FAWithService(svc, d.JWTSecret))
+	rg.POST("/auth/register", authhandlers.RegisterWithService(svc))
+	rg.POST("/auth/login", authhandlers.LoginWithService(svc))
+	rg.POST("/auth/refresh", authhandlers.Refresh(d.JWTSecret))
+	rg.POST("/auth/verify-email", authhandlers.VerifyEmailWithService(svc))
+	rg.POST("/auth/resend-verify-email", authhandlers.ResendVerificationEmailWithService(svc))
+	rg.POST("/auth/2fa/verify", authhandlers.VerifyLogin2FAWithService(svc))
+	rg.POST("/auth/2fa/request", authhandlers.Request2FACodeWithService(svc))
+	rg.POST("/auth/toggle-2fa", authhandlers.Toggle2FAWithService(svc, d.JWTSecret))
 }
