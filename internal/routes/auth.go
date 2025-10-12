@@ -9,7 +9,6 @@ import (
 )
 
 func RegisterAuthRoutes(rg *gin.RouterGroup, d Deps) {
-	// Единый экземпляр AuthService для всех эндпоинтов
 	svc := services.AuthService{
 		Users:           d.Models.Users,
 		Codes:           d.Models.VerificationCodes,
