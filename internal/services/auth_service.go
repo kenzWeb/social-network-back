@@ -186,3 +186,91 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*AuthT
 	}
 	return &AuthTokens{Access: access, Refresh: refresh}, nil
 }
+
+func (s *AuthService) ResendVerificationEmail(ctx context.Context, email string) error {
+	email = utils.NormalizeEmail(email)
+	u, err := s.Users.GetByEmail(ctx, email)
+	if err != nil {
+		return errors.New("not_found")
+	}
+	if u.IsVerified {
+		return errors.New("already_verified")
+	}
+	if err := s.Codes.DeleteByUserAndPurpose(ctx, u.ID, "email_verify"); err != nil {
+		return err
+	}
+	code := utils.GenerateDigits(6)
+	v := &models.VerificationCode{UserID: u.ID, Purpose: "email_verify", Code: code, ExpiresAt: s.Clock.Now().Add(30 * time.Minute)}
+	if err := s.Codes.Create(ctx, v); err != nil {
+		return err
+	}
+	_ = s.Mailer.Send(u.Email, "Подтверждение почты", "Ваш код подтверждения: "+code)
+	return nil
+}
+
+func (s *AuthService) Request2FACode(ctx context.Context, email string) error {
+	if !s.Email2FAEnabled {
+		return errors.New("2fa_disabled_globally")
+	}
+	email = utils.NormalizeEmail(email)
+	u, err := s.Users.GetByEmail(ctx, email)
+	if err != nil {
+		return errors.New("not_found")
+	}
+	if !u.IsVerified {
+		return errors.New("email_not_verified")
+	}
+	if !u.Is2FAEnabled {
+		return errors.New("2fa_not_enabled")
+	}
+	if err := s.Codes.DeleteByUserAndPurpose(ctx, u.ID, "login_2fa"); err != nil {
+		return err
+	}
+	code := utils.GenerateDigits(6)
+	v := &models.VerificationCode{UserID: u.ID, Purpose: "login_2fa", Code: code, ExpiresAt: s.Clock.Now().Add(10 * time.Minute)}
+	if err := s.Codes.Create(ctx, v); err != nil {
+		return err
+	}
+	_ = s.Mailer.Send(u.Email, "Код входа", "Your code: "+code)
+	return nil
+}
+
+func (s *AuthService) VerifyLogin2FA(ctx context.Context, email, code string) (*models.User, *AuthTokens, error) {
+	email = utils.NormalizeEmail(email)
+	code = strings.TrimSpace(code)
+	u, err := s.Users.GetByEmail(ctx, email)
+	if err != nil {
+		return nil, nil, errors.New("invalid_credentials")
+	}
+	if !u.Is2FAEnabled {
+		return nil, nil, errors.New("2fa_not_enabled")
+	}
+	v, err := s.Codes.GetValid(ctx, u.ID, "login_2fa", code)
+	if err != nil {
+		return nil, nil, errors.New("invalid_2fa_code")
+	}
+	if err := s.Codes.Consume(ctx, v.ID); err != nil {
+		return nil, nil, err
+	}
+	if s.Tokens == nil {
+		return u, &AuthTokens{}, nil
+	}
+	access, err := s.Tokens.IssueAccess(u)
+	if err != nil {
+		return nil, nil, err
+	}
+	refresh, err := s.Tokens.IssueRefresh(u)
+	if err != nil {
+		return nil, nil, err
+	}
+	return u, &AuthTokens{Access: access, Refresh: refresh}, nil
+}
+
+func (s *AuthService) Toggle2FA(ctx context.Context, userID string, enable bool) error {
+	u, err := s.Users.GetByID(ctx, userID)
+	if err != nil {
+		return errors.New("not_found")
+	}
+	u.Is2FAEnabled = enable
+	return s.Users.UpdateUser(ctx, u)
+}

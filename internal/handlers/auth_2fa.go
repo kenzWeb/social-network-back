@@ -1,0 +1,104 @@
+package handlers
+
+import (
+	"errors"
+	"net/http"
+
+	"modern-social-media/internal/services"
+
+	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/gin-gonic/gin"
+)
+
+func VerifyLogin2FAWithService(svc services.AuthService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req struct {
+			Email string `json:"email"`
+			Code  string `json:"code"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+			return
+		}
+		_, tokens, err := svc.VerifyLogin2FA(c.Request.Context(), req.Email, req.Code)
+		if err != nil {
+			switch err.Error() {
+			case "invalid_credentials":
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+			case "2fa_not_enabled":
+				c.JSON(http.StatusBadRequest, gin.H{"error": "2fa not enabled"})
+			case "invalid_code":
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired 2fa code"})
+			default:
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sign token"})
+			}
+			return
+		}
+		setRefreshCookie(c, tokens.Refresh)
+		c.JSON(http.StatusOK, gin.H{"token": tokens.Access})
+	}
+}
+
+func Request2FACodeWithService(svc services.AuthService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req struct {
+			Email string `json:"email"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+			return
+		}
+		if err := svc.Request2FACode(c.Request.Context(), req.Email); err != nil {
+			switch err.Error() {
+			case "2fa_disabled", "2fa_disabled_globally":
+				c.JSON(http.StatusBadRequest, gin.H{"error": "2fa by email disabled"})
+			case "not_found":
+				c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			case "email_not_verified":
+				c.JSON(http.StatusForbidden, gin.H{"error": "Email not verified"})
+			case "2fa_not_enabled":
+				c.JSON(http.StatusBadRequest, gin.H{"error": "2fa not enabled"})
+			default:
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create 2fa code"})
+			}
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"status": "sent"})
+	}
+}
+
+func Toggle2FAWithService(svc services.AuthService, jwtSecret string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req struct {
+			Enable bool `json:"enable"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+			return
+		}
+		sub, err := parseAccessSubject(jwtSecret, c.GetHeader("Authorization"))
+		if err != nil {
+			msg := err.Error()
+			if msg == "missing bearer token" {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing bearer token"})
+			} else {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			}
+			return
+		}
+		user, err := svc.Users.GetByID(c.Request.Context(), sub)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+			return
+		}
+		user.Is2FAEnabled = req.Enable
+		if err := svc.Users.UpdateUser(c.Request.Context(), user); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"is_2fa_enabled": user.Is2FAEnabled})
+	}
+}
+
+var _ = jwt.SigningMethodHS256
+var _ = errors.New
