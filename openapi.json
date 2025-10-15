@@ -1,0 +1,2430 @@
+{
+	"openapi": "3.0.3",
+	"info": {
+		"title": "Modern Social Network API",
+		"description": "REST API для современной социальной сети с поддержкой постов, комментариев, stories, чата и подписок",
+		"version": "1.0.0"
+	},
+	"servers": [
+		{
+			"url": "http://localhost:4000/api/v1",
+			"description": "Development server"
+		}
+	],
+	"tags": [
+		{
+			"name": "Authentication",
+			"description": "Регистрация, логин, верификация email, 2FA"
+		},
+		{"name": "Users", "description": "Управление пользователями"},
+		{"name": "Posts", "description": "Создание и управление постами"},
+		{"name": "Comments", "description": "Комментарии к постам"},
+		{"name": "Stories", "description": "Stories (короткие видео/фото)"},
+		{"name": "Follow", "description": "Подписки и подписчики"},
+		{"name": "Likes", "description": "Лайки постов и stories"},
+		{"name": "Skills", "description": "Навыки пользователя"},
+		{"name": "Chat", "description": "Чат и сообщения (REST API)"}
+	],
+	"paths": {
+		"/auth/register": {
+			"post": {
+				"tags": ["Authentication"],
+				"summary": "Регистрация нового пользователя",
+				"operationId": "register",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {"$ref": "#/components/schemas/RegisterRequest"}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Пользователь создан, код верификации отправлен",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {"type": "string"},
+										"user": {"$ref": "#/components/schemas/User"}
+									}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Некорректный запрос",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"409": {
+						"description": "Email или username уже используется",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/auth/login": {
+			"post": {
+				"tags": ["Authentication"],
+				"summary": "Вход в систему",
+				"operationId": "login",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {"$ref": "#/components/schemas/LoginRequest"}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Успешный вход или требуется 2FA",
+						"content": {
+							"application/json": {
+								"schema": {
+									"oneOf": [
+										{
+											"type": "object",
+											"properties": {
+												"token": {"type": "string"},
+												"user": {"$ref": "#/components/schemas/User"}
+											}
+										},
+										{
+											"type": "object",
+											"properties": {
+												"status": {"type": "string", "enum": ["2fa_required"]}
+											}
+										}
+									]
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Неверные учетные данные",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"403": {
+						"description": "Email не верифицирован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/auth/refresh": {
+			"post": {
+				"tags": ["Authentication"],
+				"summary": "Обновление access token",
+				"operationId": "refreshToken",
+				"responses": {
+					"200": {
+						"description": "Новый access token",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {"token": {"type": "string"}}
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Неверный refresh token",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/auth/verify-email": {
+			"post": {
+				"tags": ["Authentication"],
+				"summary": "Верификация email",
+				"operationId": "verifyEmail",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {"$ref": "#/components/schemas/VerifyEmailRequest"}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Email верифицирован",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {"status": {"type": "string"}}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Некорректный запрос",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"401": {
+						"description": "Неверный код",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"404": {
+						"description": "Пользователь не найден",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/auth/resend-verify-email": {
+			"post": {
+				"tags": ["Authentication"],
+				"summary": "Повторная отправка кода верификации",
+				"operationId": "resendVerifyEmail",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": ["email"],
+								"properties": {"email": {"type": "string", "format": "email"}}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Код отправлен",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {"status": {"type": "string"}}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Уже верифицирован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"404": {
+						"description": "Пользователь не найден",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/auth/2fa/request": {
+			"post": {
+				"tags": ["Authentication"],
+				"summary": "Запрос кода 2FA",
+				"operationId": "request2FA",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": ["email"],
+								"properties": {"email": {"type": "string", "format": "email"}}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Код отправлен",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {"status": {"type": "string"}}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "2FA отключен",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"403": {
+						"description": "Email не верифицирован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"404": {
+						"description": "Пользователь не найден",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/auth/2fa/verify": {
+			"post": {
+				"tags": ["Authentication"],
+				"summary": "Верификация 2FA при входе",
+				"operationId": "verify2FA",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {"$ref": "#/components/schemas/Verify2FARequest"}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Успешный вход",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"token": {"type": "string"},
+										"user": {"$ref": "#/components/schemas/User"}
+									}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "2FA не включен",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"401": {
+						"description": "Неверный код",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/auth/toggle-2fa": {
+			"post": {
+				"tags": ["Authentication"],
+				"summary": "Включить/выключить 2FA",
+				"operationId": "toggle2FA",
+				"security": [{"bearerAuth": []}],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": ["enable"],
+								"properties": {"enable": {"type": "boolean"}}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Настройка изменена",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {"is_2fa_enabled": {"type": "boolean"}}
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Неавторизован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"404": {
+						"description": "Пользователь не найден",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/user": {
+			"get": {
+				"tags": ["Users"],
+				"summary": "Получить всех пользователей",
+				"operationId": "getAllUsers",
+				"responses": {
+					"200": {
+						"description": "Список пользователей",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {"$ref": "#/components/schemas/User"}
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка сервера",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			},
+			"post": {
+				"tags": ["Users"],
+				"summary": "Создать пользователя (Admin)",
+				"operationId": "createUser",
+				"security": [{"adminToken": []}],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {"$ref": "#/components/schemas/CreateUserRequest"}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Пользователь создан",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/User"}
+							}
+						}
+					},
+					"400": {
+						"description": "Некорректный запрос",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"401": {
+						"description": "Неавторизован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка сервера",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/user/me": {
+			"get": {
+				"tags": ["Users"],
+				"summary": "Получить данные текущего пользователя",
+				"operationId": "getCurrentUser",
+				"security": [{"bearerAuth": []}],
+				"responses": {
+					"200": {
+						"description": "Данные пользователя",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/User"}
+							}
+						}
+					},
+					"401": {
+						"description": "Неавторизован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"404": {
+						"description": "Пользователь не найден",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/user/{id}": {
+			"get": {
+				"tags": ["Users"],
+				"summary": "Получить пользователя по ID",
+				"operationId": "getUserById",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {"type": "string"}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Данные пользователя",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/User"}
+							}
+						}
+					},
+					"404": {
+						"description": "Пользователь не найден",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			},
+			"put": {
+				"tags": ["Users"],
+				"summary": "Обновить пользователя",
+				"operationId": "updateUser",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {"type": "string"}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {"$ref": "#/components/schemas/UpdateUserRequest"}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Пользователь обновлен",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/User"}
+							}
+						}
+					},
+					"400": {
+						"description": "Некорректный запрос",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"404": {
+						"description": "Пользователь не найден",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка сервера",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"tags": ["Users"],
+				"summary": "Удалить пользователя",
+				"operationId": "deleteUser",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {"type": "string"}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Пользователь удален"
+					},
+					"404": {
+						"description": "Пользователь не найден",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/user/by-email/{email}": {
+			"get": {
+				"tags": ["Users"],
+				"summary": "Получить пользователя по email",
+				"operationId": "getUserByEmail",
+				"parameters": [
+					{
+						"name": "email",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"format": "email"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Данные пользователя",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/User"}
+							}
+						}
+					},
+					"404": {
+						"description": "Пользователь не найден",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/post": {
+			"get": {
+				"tags": ["Posts"],
+				"summary": "Получить посты текущего пользователя",
+				"operationId": "getPostsByUser",
+				"security": [{"bearerAuth": []}],
+				"responses": {
+					"200": {
+						"description": "Список постов",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {"$ref": "#/components/schemas/Post"}
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Неавторизован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка сервера",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			},
+			"post": {
+				"tags": ["Posts"],
+				"summary": "Создать пост",
+				"operationId": "createPost",
+				"security": [{"bearerAuth": []}],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {"$ref": "#/components/schemas/CreatePostRequest"}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Пост создан",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Post"}
+							}
+						}
+					},
+					"400": {
+						"description": "Некорректный запрос",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"401": {
+						"description": "Неавторизован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка сервера",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/post/{id}": {
+			"put": {
+				"tags": ["Posts"],
+				"summary": "Обновить пост",
+				"operationId": "updatePost",
+				"security": [{"bearerAuth": []}],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {"type": "string"}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {"$ref": "#/components/schemas/UpdatePostRequest"}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Пост обновлен",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Post"}
+							}
+						}
+					},
+					"400": {
+						"description": "Некорректный запрос",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"401": {
+						"description": "Неавторизован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"404": {
+						"description": "Пост не найден",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка сервера",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"tags": ["Posts"],
+				"summary": "Удалить пост",
+				"operationId": "deletePost",
+				"security": [{"bearerAuth": []}],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {"type": "string"}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Пост удален"
+					},
+					"401": {
+						"description": "Неавторизован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"404": {
+						"description": "Пост не найден",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/post/{id}/like": {
+			"post": {
+				"tags": ["Likes"],
+				"summary": "Поставить/убрать лайк посту",
+				"operationId": "togglePostLike",
+				"security": [{"bearerAuth": []}],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {"type": "string"},
+						"description": "ID поста"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Статус лайка изменен",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/LikeResponse"}
+							}
+						}
+					},
+					"401": {
+						"description": "Неавторизован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"404": {
+						"description": "Пост не найден",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка сервера",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/comment/post/{id}": {
+			"get": {
+				"tags": ["Comments"],
+				"summary": "Получить комментарии к посту",
+				"operationId": "getCommentsByPost",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {"type": "string"},
+						"description": "ID поста"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Список комментариев",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {"$ref": "#/components/schemas/Comment"}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Некорректный запрос",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"404": {
+						"description": "Пост не найден",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка сервера",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			},
+			"post": {
+				"tags": ["Comments"],
+				"summary": "Создать комментарий к посту",
+				"operationId": "createComment",
+				"security": [{"bearerAuth": []}],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {"type": "string"},
+						"description": "ID поста"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {"$ref": "#/components/schemas/CreateCommentRequest"}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Комментарий создан",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Comment"}
+							}
+						}
+					},
+					"400": {
+						"description": "Некорректный запрос",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"401": {
+						"description": "Неавторизован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"404": {
+						"description": "Пост не найден",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка сервера",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/comment/user": {
+			"get": {
+				"tags": ["Comments"],
+				"summary": "Получить комментарии текущего пользователя",
+				"operationId": "getCommentsByUser",
+				"security": [{"bearerAuth": []}],
+				"responses": {
+					"200": {
+						"description": "Список комментариев",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {"$ref": "#/components/schemas/Comment"}
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Неавторизован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка сервера",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/comment/{id}": {
+			"get": {
+				"tags": ["Comments"],
+				"summary": "Получить комментарий по ID",
+				"operationId": "getCommentById",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {"type": "string"}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Данные комментария",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Comment"}
+							}
+						}
+					},
+					"400": {
+						"description": "Некорректный запрос",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"404": {
+						"description": "Комментарий не найден",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка сервера",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/story": {
+			"get": {
+				"tags": ["Stories"],
+				"summary": "Получить stories текущего пользователя",
+				"operationId": "getStoriesByUser",
+				"security": [{"bearerAuth": []}],
+				"responses": {
+					"200": {
+						"description": "Список stories",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {"$ref": "#/components/schemas/Story"}
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Неавторизован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка сервера",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			},
+			"post": {
+				"tags": ["Stories"],
+				"summary": "Создать story",
+				"operationId": "createStory",
+				"security": [{"bearerAuth": []}],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"type": "object",
+								"required": ["media"],
+								"properties": {
+									"media": {
+										"type": "string",
+										"format": "binary",
+										"description": "Image или video файл (макс. 100MB)"
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Story создана",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Story"}
+							}
+						}
+					},
+					"400": {
+						"description": "Некорректный файл",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"401": {
+						"description": "Неавторизован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка сервера",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/story/{id}": {
+			"get": {
+				"tags": ["Stories"],
+				"summary": "Получить story по ID",
+				"operationId": "getStoryById",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {"type": "string"}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Данные story",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Story"}
+							}
+						}
+					},
+					"404": {
+						"description": "Story не найдена",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка сервера",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			},
+			"put": {
+				"tags": ["Stories"],
+				"summary": "Обновить story",
+				"operationId": "updateStory",
+				"security": [{"bearerAuth": []}],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {"type": "string"}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"type": "object",
+								"required": ["media"],
+								"properties": {
+									"media": {
+										"type": "string",
+										"format": "binary"
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Story обновлена",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Story"}
+							}
+						}
+					},
+					"400": {
+						"description": "Некорректный файл",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"401": {
+						"description": "Неавторизован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"404": {
+						"description": "Story не найдена",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка сервера",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"tags": ["Stories"],
+				"summary": "Удалить story",
+				"operationId": "deleteStory",
+				"security": [{"bearerAuth": []}],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {"type": "string"}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Story удалена"
+					},
+					"401": {
+						"description": "Неавторизован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"404": {
+						"description": "Story не найдена",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/story/user/{id}": {
+			"get": {
+				"tags": ["Stories"],
+				"summary": "Получить недавние stories пользователя",
+				"operationId": "getStoriesByUserId",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {"type": "string"},
+						"description": "ID пользователя"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Список stories",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {"$ref": "#/components/schemas/Story"}
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка сервера",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/story/following": {
+			"get": {
+				"tags": ["Stories"],
+				"summary": "Получить stories от подписок",
+				"operationId": "getAllStories",
+				"security": [{"bearerAuth": []}],
+				"responses": {
+					"200": {
+						"description": "Список stories",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {"$ref": "#/components/schemas/Story"}
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Неавторизован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка сервера",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/story/{id}/like": {
+			"post": {
+				"tags": ["Likes"],
+				"summary": "Поставить/убрать лайк story",
+				"operationId": "toggleStoryLike",
+				"security": [{"bearerAuth": []}],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {"type": "string"},
+						"description": "ID story"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Статус лайка изменен",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/LikeResponse"}
+							}
+						}
+					},
+					"401": {
+						"description": "Неавторизован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"404": {
+						"description": "Story не найдена",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка сервера",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/follow/{id}/toggle": {
+			"post": {
+				"tags": ["Follow"],
+				"summary": "Подписаться/отписаться от пользователя (toggle)",
+				"operationId": "toggleFollow",
+				"security": [{"bearerAuth": []}],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {"type": "string"},
+						"description": "ID пользователя"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Статус подписки изменен",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/FollowStatusResponse"}
+							}
+						}
+					},
+					"400": {
+						"description": "Некорректный запрос",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"401": {
+						"description": "Неавторизован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/follow/{id}": {
+			"post": {
+				"tags": ["Follow"],
+				"summary": "Подписаться на пользователя",
+				"operationId": "followUser",
+				"security": [{"bearerAuth": []}],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {"type": "string"},
+						"description": "ID пользователя"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Подписка создана",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/FollowStatusResponse"}
+							}
+						}
+					},
+					"400": {
+						"description": "Некорректный запрос",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"401": {
+						"description": "Неавторизован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"tags": ["Follow"],
+				"summary": "Отписаться от пользователя",
+				"operationId": "unfollowUser",
+				"security": [{"bearerAuth": []}],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {"type": "string"},
+						"description": "ID пользователя"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Подписка удалена",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/FollowStatusResponse"}
+							}
+						}
+					},
+					"400": {
+						"description": "Некорректный запрос",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"401": {
+						"description": "Неавторизован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/follow/{id}/status": {
+			"get": {
+				"tags": ["Follow"],
+				"summary": "Проверить статус подписки",
+				"operationId": "isFollowing",
+				"security": [{"bearerAuth": []}],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {"type": "string"},
+						"description": "ID пользователя"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Статус подписки",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/FollowStatusResponse"}
+							}
+						}
+					},
+					"400": {
+						"description": "Некорректный запрос",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"401": {
+						"description": "Неавторизован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/user/{id}/followers": {
+			"get": {
+				"tags": ["Follow"],
+				"summary": "Получить подписчиков пользователя",
+				"operationId": "getFollowers",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {"type": "string"},
+						"description": "ID пользователя"
+					},
+					{
+						"name": "limit",
+						"in": "query",
+						"schema": {"type": "integer", "default": 20}
+					},
+					{
+						"name": "offset",
+						"in": "query",
+						"schema": {"type": "integer", "default": 0}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Список подписчиков",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {"$ref": "#/components/schemas/User"}
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка сервера",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/user/{id}/following": {
+			"get": {
+				"tags": ["Follow"],
+				"summary": "Получить подписки пользователя",
+				"operationId": "getFollowing",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {"type": "string"},
+						"description": "ID пользователя"
+					},
+					{
+						"name": "limit",
+						"in": "query",
+						"schema": {"type": "integer", "default": 20}
+					},
+					{
+						"name": "offset",
+						"in": "query",
+						"schema": {"type": "integer", "default": 0}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Список подписок",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {"$ref": "#/components/schemas/User"}
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка сервера",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/user/{id}/follow-counts": {
+			"get": {
+				"tags": ["Follow"],
+				"summary": "Получить количество подписчиков и подписок",
+				"operationId": "getFollowCounts",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {"type": "string"},
+						"description": "ID пользователя"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Статистика подписок",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/FollowCountsResponse"}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка сервера",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/skill": {
+			"get": {
+				"tags": ["Skills"],
+				"summary": "Получить навыки текущего пользователя",
+				"operationId": "getAllSkills",
+				"security": [{"bearerAuth": []}],
+				"responses": {
+					"200": {
+						"description": "Список навыков",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {"$ref": "#/components/schemas/Skill"}
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Неавторизован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка сервера",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			},
+			"post": {
+				"tags": ["Skills"],
+				"summary": "Добавить навык",
+				"operationId": "addSkill",
+				"security": [{"bearerAuth": []}],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {"$ref": "#/components/schemas/AddSkillRequest"}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Навык добавлен"
+					},
+					"400": {
+						"description": "Некорректный запрос",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"401": {
+						"description": "Неавторизован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					},
+					"500": {
+						"description": "Внутренняя ошибка сервера",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/chat/conversations": {
+			"get": {
+				"tags": ["Chat"],
+				"summary": "Список диалогов",
+				"operationId": "listConversations",
+				"security": [{"bearerAuth": []}],
+				"parameters": [
+					{
+						"name": "limit",
+						"in": "query",
+						"schema": {"type": "integer", "default": 20}
+					},
+					{
+						"name": "offset",
+						"in": "query",
+						"schema": {"type": "integer", "default": 0}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Список диалогов",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"conversations": {
+											"type": "array",
+											"items": {"$ref": "#/components/schemas/Conversation"}
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Неавторизован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/chat/conversations/{id}/messages": {
+			"get": {
+				"tags": ["Chat"],
+				"summary": "История сообщений",
+				"operationId": "listMessages",
+				"security": [{"bearerAuth": []}],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {"type": "string"},
+						"description": "ID беседы"
+					},
+					{
+						"name": "limit",
+						"in": "query",
+						"schema": {"type": "integer", "default": 50}
+					},
+					{
+						"name": "offset",
+						"in": "query",
+						"schema": {"type": "integer", "default": 0}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Список сообщений",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"messages": {
+											"type": "array",
+											"items": {"$ref": "#/components/schemas/Message"}
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Неавторизован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/chat/direct/{user_id}/send": {
+			"post": {
+				"tags": ["Chat"],
+				"summary": "Отправить сообщение в 1:1",
+				"operationId": "sendDirectMessage",
+				"security": [{"bearerAuth": []}],
+				"parameters": [
+					{
+						"name": "user_id",
+						"in": "path",
+						"required": true,
+						"schema": {"type": "string"},
+						"description": "ID получателя"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {"$ref": "#/components/schemas/SendMessageRequest"}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Сообщение отправлено",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {"$ref": "#/components/schemas/Message"}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Неавторизован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/chat/conversations/{id}/read": {
+			"post": {
+				"tags": ["Chat"],
+				"summary": "Пометить беседу прочитанной",
+				"operationId": "markRead",
+				"security": [{"bearerAuth": []}],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {"type": "string"},
+						"description": "ID беседы"
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Беседа помечена прочитанной"
+					},
+					"401": {
+						"description": "Неавторизован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/chat/presence/{user_id}": {
+			"get": {
+				"tags": ["Chat"],
+				"summary": "Получить статус онлайн/оффлайн пользователя",
+				"operationId": "getPresence",
+				"security": [{"bearerAuth": []}],
+				"parameters": [
+					{
+						"name": "user_id",
+						"in": "path",
+						"required": true,
+						"schema": {"type": "string"},
+						"description": "ID пользователя"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Статус пользователя",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/PresenceResponse"}
+							}
+						}
+					},
+					"401": {
+						"description": "Неавторизован",
+						"content": {
+							"application/json": {
+								"schema": {"$ref": "#/components/schemas/Error"}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/ws": {
+			"get": {
+				"tags": ["Chat"],
+				"summary": "WebSocket соединение для чата",
+				"description": "WebSocket эндпоинт для real-time чата. Требуется Authorization Bearer JWT токен в заголовках. События client->server: message (conversation_id, body), typing (conversation_id, is_typing), read (conversation_id). События server->client: presence (user_id, online, last_seen), typing (conversation_id, user_id, is_typing), message (conversation_id, sender_id, body, created_at), error (error)",
+				"operationId": "chatWebSocket",
+				"security": [{"bearerAuth": []}],
+				"responses": {
+					"101": {
+						"description": "Switching Protocols - WebSocket connection established"
+					},
+					"401": {
+						"description": "Unauthorized - Invalid or missing JWT token"
+					}
+				}
+			}
+		}
+	},
+	"components": {
+		"securitySchemes": {
+			"bearerAuth": {
+				"type": "http",
+				"scheme": "bearer",
+				"bearerFormat": "JWT"
+			},
+			"adminToken": {
+				"type": "apiKey",
+				"in": "header",
+				"name": "X-Admin-Token"
+			}
+		},
+		"schemas": {
+			"User": {
+				"type": "object",
+				"properties": {
+					"id": {"type": "string", "example": "ckxxx123456"},
+					"username": {"type": "string", "example": "johndoe"},
+					"email": {
+						"type": "string",
+						"format": "email",
+						"example": "john@example.com"
+					},
+					"first_name": {"type": "string", "example": "John"},
+					"last_name": {"type": "string", "example": "Doe"},
+					"bio": {"type": "string", "example": "Software developer"},
+					"avatar_url": {
+						"type": "string",
+						"example": "/uploads/avatars/user123.jpg"
+					},
+					"is_verified": {"type": "boolean", "example": true},
+					"is_active": {"type": "boolean", "example": true},
+					"is_2fa_enabled": {"type": "boolean", "example": false},
+					"created_at": {"type": "string", "format": "date-time"},
+					"updated_at": {"type": "string", "format": "date-time"}
+				}
+			},
+			"Post": {
+				"type": "object",
+				"properties": {
+					"id": {"type": "string"},
+					"user_id": {"type": "string"},
+					"content": {"type": "string"},
+					"image_url": {"type": "string"},
+					"likes_count": {"type": "integer"},
+					"comments_count": {"type": "integer"},
+					"created_at": {"type": "string", "format": "date-time"},
+					"updated_at": {"type": "string", "format": "date-time"},
+					"user": {"$ref": "#/components/schemas/User"}
+				}
+			},
+			"Comment": {
+				"type": "object",
+				"properties": {
+					"id": {"type": "string"},
+					"user_id": {"type": "string"},
+					"post_id": {"type": "string"},
+					"message": {"type": "string"},
+					"image_url": {"type": "string"},
+					"created_at": {"type": "string", "format": "date-time"},
+					"updated_at": {"type": "string", "format": "date-time"},
+					"user": {"$ref": "#/components/schemas/User"}
+				}
+			},
+			"Story": {
+				"type": "object",
+				"properties": {
+					"id": {"type": "string"},
+					"user_id": {"type": "string"},
+					"media_url": {"type": "string"},
+					"media_type": {"type": "string", "enum": ["image", "video"]},
+					"likes_count": {"type": "integer"},
+					"created_at": {"type": "string", "format": "date-time"},
+					"updated_at": {"type": "string", "format": "date-time"},
+					"user": {"$ref": "#/components/schemas/User"}
+				}
+			},
+			"Follow": {
+				"type": "object",
+				"properties": {
+					"id": {"type": "string"},
+					"follower_id": {"type": "string"},
+					"following_id": {"type": "string"},
+					"created_at": {"type": "string", "format": "date-time"},
+					"follower": {"$ref": "#/components/schemas/User"},
+					"following": {"$ref": "#/components/schemas/User"}
+				}
+			},
+			"Skill": {
+				"type": "object",
+				"properties": {
+					"id": {"type": "string"},
+					"user_id": {"type": "string"},
+					"name": {"type": "string"},
+					"created_at": {"type": "string", "format": "date-time"},
+					"updated_at": {"type": "string", "format": "date-time"}
+				}
+			},
+			"Conversation": {
+				"type": "object",
+				"properties": {
+					"id": {"type": "string"},
+					"created_at": {"type": "string", "format": "date-time"},
+					"updated_at": {"type": "string", "format": "date-time"},
+					"participants": {
+						"type": "array",
+						"items": {"$ref": "#/components/schemas/ConversationParticipant"}
+					},
+					"messages": {
+						"type": "array",
+						"items": {"$ref": "#/components/schemas/Message"}
+					}
+				}
+			},
+			"ConversationParticipant": {
+				"type": "object",
+				"properties": {
+					"id": {"type": "string"},
+					"conversation_id": {"type": "string"},
+					"user_id": {"type": "string"},
+					"joined_at": {"type": "string", "format": "date-time"},
+					"last_read_at": {
+						"type": "string",
+						"format": "date-time",
+						"nullable": true
+					}
+				}
+			},
+			"Message": {
+				"type": "object",
+				"properties": {
+					"id": {"type": "string"},
+					"conversation_id": {"type": "string"},
+					"sender_id": {"type": "string"},
+					"body": {"type": "string"},
+					"created_at": {"type": "string", "format": "date-time"}
+				}
+			},
+			"RegisterRequest": {
+				"type": "object",
+				"required": ["username", "email", "password"],
+				"properties": {
+					"username": {"type": "string", "minLength": 3, "maxLength": 50},
+					"email": {"type": "string", "format": "email"},
+					"password": {"type": "string", "minLength": 8},
+					"first_name": {"type": "string", "maxLength": 50},
+					"last_name": {"type": "string", "maxLength": 50}
+				}
+			},
+			"LoginRequest": {
+				"type": "object",
+				"required": ["email", "password"],
+				"properties": {
+					"email": {"type": "string", "format": "email"},
+					"password": {"type": "string"}
+				}
+			},
+			"VerifyEmailRequest": {
+				"type": "object",
+				"required": ["email", "code"],
+				"properties": {
+					"email": {"type": "string", "format": "email"},
+					"code": {"type": "string"}
+				}
+			},
+			"Verify2FARequest": {
+				"type": "object",
+				"required": ["email", "code"],
+				"properties": {
+					"email": {"type": "string", "format": "email"},
+					"code": {"type": "string"}
+				}
+			},
+			"CreateUserRequest": {
+				"type": "object",
+				"required": ["username", "email", "password"],
+				"properties": {
+					"username": {"type": "string"},
+					"email": {"type": "string", "format": "email"},
+					"password": {"type": "string"},
+					"first_name": {"type": "string"},
+					"last_name": {"type": "string"}
+				}
+			},
+			"UpdateUserRequest": {
+				"type": "object",
+				"properties": {
+					"username": {"type": "string"},
+					"email": {"type": "string", "format": "email"},
+					"password": {"type": "string"},
+					"first_name": {"type": "string"},
+					"last_name": {"type": "string"},
+					"bio": {"type": "string"},
+					"avatar_url": {"type": "string"},
+					"is_active": {"type": "boolean"},
+					"is_verified": {"type": "boolean"},
+					"is_2fa_enabled": {"type": "boolean"}
+				}
+			},
+			"CreatePostRequest": {
+				"type": "object",
+				"required": ["content"],
+				"properties": {
+					"content": {"type": "string"},
+					"imageUrl": {"type": "string"}
+				}
+			},
+			"UpdatePostRequest": {
+				"type": "object",
+				"required": ["content"],
+				"properties": {
+					"content": {"type": "string"},
+					"imageUrl": {"type": "string"}
+				}
+			},
+			"CreateCommentRequest": {
+				"type": "object",
+				"required": ["message"],
+				"properties": {
+					"message": {"type": "string"}
+				}
+			},
+			"AddSkillRequest": {
+				"type": "object",
+				"required": ["name"],
+				"properties": {
+					"name": {"type": "string", "maxLength": 100}
+				}
+			},
+			"SendMessageRequest": {
+				"type": "object",
+				"required": ["body"],
+				"properties": {
+					"body": {"type": "string"}
+				}
+			},
+			"LikeResponse": {
+				"type": "object",
+				"properties": {
+					"liked": {"type": "boolean"},
+					"likes_count": {"type": "integer"}
+				}
+			},
+			"FollowStatusResponse": {
+				"type": "object",
+				"properties": {
+					"following": {"type": "boolean"},
+					"followers": {"type": "integer"},
+					"following_count": {"type": "integer"}
+				}
+			},
+			"FollowCountsResponse": {
+				"type": "object",
+				"properties": {
+					"followers": {"type": "integer"},
+					"following": {"type": "integer"}
+				}
+			},
+			"PresenceResponse": {
+				"type": "object",
+				"properties": {
+					"user_id": {"type": "string"},
+					"online": {"type": "boolean"},
+					"last_seen": {"type": "integer", "description": "Unix timestamp"}
+				}
+			},
+			"Error": {
+				"type": "object",
+				"properties": {
+					"error": {"type": "string"}
+				}
+			}
+		}
+	}
+}

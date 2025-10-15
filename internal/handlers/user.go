@@ -22,6 +22,24 @@ func GetAllUsers(usersRepo repository.UserRepository) gin.HandlerFunc {
 	}
 }
 
+func GetCurrentUser(usersRepo repository.UserRepository) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		uidAny, ok := c.Get("userID")
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			return
+		}
+		userID, _ := uidAny.(string)
+
+		user, err := usersRepo.GetByID(c.Request.Context(), userID)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User Not Found"})
+			return
+		}
+		c.JSON(http.StatusOK, user)
+	}
+}
+
 func GetUserById(userRepo repository.UserRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")

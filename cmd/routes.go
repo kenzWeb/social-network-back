@@ -9,6 +9,8 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func (app *application) routes() http.Handler {
@@ -25,6 +27,13 @@ func (app *application) routes() http.Handler {
 	}))
 
 	g.Static("/uploads", "./uploads")
+
+	g.GET("/openapi.json", func(c *gin.Context) {
+		c.File("./openapi.json")
+	})
+
+	g.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler,
+		ginSwagger.URL("/openapi.json")))
 
 	v1 := g.Group("/api/v1")
 
