@@ -103,7 +103,7 @@ func Toggle2FAWithService(svc services.AuthService, jwtSecret string) gin.Handle
 
 func Refresh(jwtSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		cookie, err := c.Cookie("refresh_token")
+		cookie, err := c.Cookie("refreshToken")
 		if err != nil || cookie == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing refresh token"})
 			return

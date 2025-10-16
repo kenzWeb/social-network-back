@@ -10,7 +10,7 @@ import (
 
 func setRefreshCookie(c *gin.Context, token string) {
 	c.SetCookie(
-		"refresh_token",
+		"refreshToken",
 		token,
 		int((14 * 24 * time.Hour).Seconds()),
 		"/",
