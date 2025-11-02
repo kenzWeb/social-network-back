@@ -7,6 +7,7 @@ import (
 	"modern-social-media/internal/auth"
 	"modern-social-media/internal/models"
 	"modern-social-media/internal/repository"
+	"modern-social-media/internal/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -90,6 +91,7 @@ func CreateUser(usersRepo repository.UserRepository) gin.HandlerFunc {
 			Password:  hashed,
 			FirstName: req.FirstName,
 			LastName:  req.LastName,
+			AvatarURL: utils.GetRandomDefaultAvatar(),
 		}
 
 		if err := usersRepo.CreateUser(c.Request.Context(), user); err != nil {

@@ -117,7 +117,14 @@ func (s *AuthService) Register(ctx context.Context, in RegisterInput) (*models.U
 			}
 			created = u
 		} else {
-			u := &models.User{Username: username, Email: email, Password: hash, FirstName: first, LastName: last}
+			u := &models.User{
+				Username:  username,
+				Email:     email,
+				Password:  hash,
+				FirstName: first,
+				LastName:  last,
+				AvatarURL: utils.GetRandomDefaultAvatar(),
+			}
 			if err := s.Users.CreateUser(ctx, u); err != nil {
 				return err
 			}
