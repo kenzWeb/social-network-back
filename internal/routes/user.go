@@ -8,11 +8,15 @@ import (
 )
 
 func RegisterUserRoutes(rg *gin.RouterGroup, d Deps) {
-	rg.GET("/user", handlers.GetAllUsers(d.Models.Users))
 	rg.GET("/user/me", middleware.Auth(d.JWTSecret), handlers.GetCurrentUser(d.Models.Users))
-	rg.GET("/user/:id", handlers.GetUserById(d.Models.Users))
 	rg.GET("/user/by-email/:email", handlers.GetUserByEmail(d.Models.Users))
-	rg.POST("/user", middleware.StaticToken(d.AdminToken), handlers.CreateUser(d.Models.Users))
-	rg.PUT("/user/:id", handlers.UpdateUser(d.Models.Users))
-	rg.DELETE("/user/:id", handlers.DeleteUser(d.Models.Users))
+
+	protected := rg.Group("", middleware.StaticToken(d.AdminToken))
+	{
+		protected.GET("/user", handlers.GetAllUsers(d.Models.Users))
+		protected.GET("/user/:id", handlers.GetUserById(d.Models.Users))
+		protected.POST("/user", handlers.CreateUser(d.Models.Users))
+		protected.PUT("/user/:id", handlers.UpdateUser(d.Models.Users))
+		protected.DELETE("/user/:id", handlers.DeleteUser(d.Models.Users))
+	}
 }

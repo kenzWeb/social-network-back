@@ -54,3 +54,15 @@ func (r UserRepository) UpdateUser(ctx context.Context, u *models.User) error {
 func (r UserRepository) Delete(ctx context.Context, id string) error {
 	return r.db.WithContext(ctx).Delete(&models.User{}, "id = ?", id).Error
 }
+
+func (r UserRepository) GetFollowersCount(ctx context.Context, userID string) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&models.Follow{}).Where("following_id = ?", userID).Count(&count).Error
+	return count, err
+}
+
+func (r UserRepository) GetFollowingCount(ctx context.Context, userID string) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&models.Follow{}).Where("follower_id = ?", userID).Count(&count).Error
+	return count, err
+}

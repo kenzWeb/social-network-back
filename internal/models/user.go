@@ -22,6 +22,9 @@ type User struct {
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 
+	FollowersCount int64 `gorm:"-" json:"followers_count,omitempty"`
+	FollowingCount int64 `gorm:"-" json:"following_count,omitempty"`
+
 	Posts     []Post    `gorm:"foreignKey:UserID" json:"posts,omitempty"`
 	Likes     []Like    `gorm:"foreignKey:UserID" json:"likes,omitempty"`
 	Comments  []Comment `gorm:"foreignKey:UserID" json:"comments,omitempty"`

@@ -19,6 +19,14 @@ func GetAllUsers(usersRepo repository.UserRepository) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
 			return
 		}
+
+		for i := range users {
+			followersCount, _ := usersRepo.GetFollowersCount(c.Request.Context(), users[i].ID)
+			followingCount, _ := usersRepo.GetFollowingCount(c.Request.Context(), users[i].ID)
+			users[i].FollowersCount = followersCount
+			users[i].FollowingCount = followingCount
+		}
+
 		c.JSON(http.StatusOK, users)
 	}
 }
@@ -37,6 +45,12 @@ func GetCurrentUser(usersRepo repository.UserRepository) gin.HandlerFunc {
 			c.JSON(http.StatusNotFound, gin.H{"error": "User Not Found"})
 			return
 		}
+
+		followersCount, _ := usersRepo.GetFollowersCount(c.Request.Context(), userID)
+		followingCount, _ := usersRepo.GetFollowingCount(c.Request.Context(), userID)
+		user.FollowersCount = followersCount
+		user.FollowingCount = followingCount
+
 		c.JSON(http.StatusOK, user)
 	}
 }
@@ -49,6 +63,12 @@ func GetUserById(userRepo repository.UserRepository) gin.HandlerFunc {
 			c.JSON(http.StatusNotFound, gin.H{"error": "User Not Found"})
 			return
 		}
+
+		followersCount, _ := userRepo.GetFollowersCount(c.Request.Context(), id)
+		followingCount, _ := userRepo.GetFollowingCount(c.Request.Context(), id)
+		user.FollowersCount = followersCount
+		user.FollowingCount = followingCount
+
 		c.JSON(http.StatusOK, user)
 	}
 }
