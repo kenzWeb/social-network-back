@@ -130,3 +130,41 @@ func GetFollowCounts(repo repository.FollowRepository) gin.HandlerFunc {
 		c.JSON(http.StatusOK, gin.H{"followers": followers, "following": following})
 	}
 }
+
+func GetMyFollowers(repo repository.FollowRepository) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		uidAny, ok := c.Get("userID")
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			return
+		}
+		userID := uidAny.(string)
+		limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+		offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+		users, err := repo.GetFollowers(c.Request.Context(), userID, limit, offset)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, users)
+	}
+}
+
+func GetMyFollowing(repo repository.FollowRepository) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		uidAny, ok := c.Get("userID")
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			return
+		}
+		userID := uidAny.(string)
+		limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+		offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+		users, err := repo.GetFollowing(c.Request.Context(), userID, limit, offset)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, users)
+	}
+}

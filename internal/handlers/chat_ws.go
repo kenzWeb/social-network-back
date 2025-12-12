@@ -2,22 +2,23 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
 
-	"modern-social-media/internal/middleware"
 	imodels "modern-social-media/internal/models"
 	"modern-social-media/internal/repository"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )
 
 type WSEvent struct {
-	Type string          `json:"type"` // message|typing|presence|read|error
+	Type string          `json:"type"`
 	Data json.RawMessage `json:"data"`
 }
 
@@ -114,13 +115,36 @@ type ChatWSDeps struct {
 }
 
 func ChatWSHandler(deps ChatWSDeps) gin.HandlerFunc {
-	authMW := middleware.Auth(deps.JWTSecret)
 	return func(c *gin.Context) {
-		authMW(c)
-		if c.IsAborted() {
+
+		tokenStr := c.Query("token")
+		if tokenStr == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "token required"})
 			return
 		}
-		userID := c.GetString("userID")
+
+		parsed, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
+			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, errors.New("unexpected signing method")
+			}
+			return []byte(deps.JWTSecret), nil
+		})
+		if err != nil || !parsed.Valid {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+			return
+		}
+
+		claims, ok := parsed.Claims.(jwt.MapClaims)
+		if !ok || claims["type"] != "access" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token type"})
+			return
+		}
+
+		userID, _ := claims["sub"].(string)
+		if userID == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid subject"})
+			return
+		}
 
 		conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"log"
+	"time"
 	"modern-social-media/internal/env"
 	"modern-social-media/internal/repository"
 	"modern-social-media/internal/services"
@@ -44,6 +46,22 @@ func main() {
 	log.Println("Миграции выполнены успешно")
 
 	models := repository.NewModels(db)
+	
+	storyService := services.NewStoryService(models.Stories)
+	go func() {
+		ctx := context.Background()
+		if err := storyService.CleanupExpiredStories(ctx); err != nil {
+			log.Printf("Initial story cleanup failed: %v", err)
+		}
+		
+		ticker := time.NewTicker(1 * time.Hour)
+		defer ticker.Stop()
+		for range ticker.C {
+			if err := storyService.CleanupExpiredStories(ctx); err != nil {
+				log.Printf("Story cleanup failed: %v", err)
+			}
+		}
+	}()
 	mailer := &services.SMTPSender{
 		Host:     env.GetEnvString("SMTP_HOST", "localhost"),
 		Port:     env.GetEnvInt("SMTP_PORT", 587),

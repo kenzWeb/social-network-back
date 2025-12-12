@@ -3,17 +3,24 @@
 Версия: v1  
 Базовый путь: `/api/v1`
 
-Аутентификация: все WS/REST эндпоинты требуют Bearer JWT (как и остальной бэкенд).
+Аутентификация: все REST эндпоинты требуют Bearer JWT. WebSocket эндпоинт требует JWT токен в query параметре.
 
 ## WebSocket
 
-Endpoint: `GET /api/v1/ws`
+Endpoint: `GET /api/v1/ws?token=<access_token>`
 
-Заголовки:
+Параметры URL:
 
-- `Authorization: Bearer <access_token>`
+- `token` (обязательный) — JWT access токен для авторизации
 
 Сообщения передаются в формате JSON: `{ "type": string, "data": any }`
+
+Пример подключения:
+
+```javascript
+const token = 'your_jwt_access_token'
+const ws = new WebSocket(`ws://localhost:4000/api/v1/ws?token=${token}`)
+```
 
 Поддерживаемые события (client -> server):
 

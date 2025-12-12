@@ -1,0 +1,345 @@
+definitions:
+  handlers.CreatePostRequest:
+    properties:
+      content:
+        type: string
+      imageUrl:
+        type: string
+    type: object
+  handlers.CreateUserRequest:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+      password:
+        minLength: 6
+        type: string
+      username:
+        type: string
+    required:
+    - email
+    - password
+    - username
+    type: object
+  handlers.PostResponse:
+    properties:
+      comments_count:
+        type: integer
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      image_url:
+        type: string
+      likes_count:
+        type: integer
+      user_id:
+        type: string
+    type: object
+  handlers.StoryResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      media_type:
+        type: string
+      media_url:
+        type: string
+    type: object
+  handlers.UpdatePostRequest:
+    properties:
+      content:
+        type: string
+      imageUrl:
+        type: string
+    type: object
+  handlers.UpdateUserRequest:
+    properties:
+      avatar_url:
+        type: string
+      bio:
+        type: string
+      email:
+        type: string
+      first_name:
+        type: string
+      is_2fa_enabled:
+        type: boolean
+      is_active:
+        type: boolean
+      is_verified:
+        type: boolean
+      last_name:
+        type: string
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  handlers.UserDTO:
+    properties:
+      avatar_url:
+        type: string
+      bio:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      first_name:
+        type: string
+      followers_count:
+        type: integer
+      following_count:
+        type: integer
+      id:
+        type: string
+      is_2fa_enabled:
+        type: boolean
+      is_active:
+        type: boolean
+      is_verified:
+        type: boolean
+      last_name:
+        type: string
+      updated_at:
+        type: string
+      username:
+        type: string
+    type: object
+  handlers.UserStoriesResponse:
+    properties:
+      avatar_url:
+        type: string
+      id:
+        type: string
+      stories:
+        items:
+          $ref: '#/definitions/handlers.StoryResponse'
+        type: array
+      username:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /auth/me:
+    get:
+      description: Get the currently authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.UserDTO'
+      summary: Get current user
+      tags:
+      - users
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user
+      parameters:
+      - description: User registration details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.UserDTO'
+      summary: Create user
+      tags:
+      - users
+  /posts:
+    get:
+      description: Get posts by user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.PostResponse'
+            type: array
+      summary: Get user posts
+      tags:
+      - posts
+    post:
+      consumes:
+      - application/json
+      description: Create a new post
+      parameters:
+      - description: Post content
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreatePostRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.PostResponse'
+      summary: Create post
+      tags:
+      - posts
+  /posts/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Update a post
+      parameters:
+      - description: Post ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Post content
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdatePostRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PostResponse'
+      summary: Update post
+      tags:
+      - posts
+  /story:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload a new story (image or video)
+      parameters:
+      - description: Story media file
+        in: formData
+        name: media
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.StoryResponse'
+      summary: Create a new story
+      tags:
+      - stories
+  /story/following:
+    get:
+      description: Get stories from followed users
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.UserStoriesResponse'
+            type: array
+      summary: Get stories feed
+      tags:
+      - stories
+  /users:
+    get:
+      description: Get a list of all users
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.UserDTO'
+            type: array
+      summary: Get all users
+      tags:
+      - users
+  /users/{id}:
+    get:
+      description: Get user details by ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.UserDTO'
+      summary: Get user by ID
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Update user details
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: User update details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.UserDTO'
+      summary: Update user
+      tags:
+      - users
+  /users/email/{email}:
+    get:
+      description: Get user details by email
+      parameters:
+      - description: User Email
+        in: path
+        name: email
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.UserDTO'
+      summary: Get user by email
+      tags:
+      - users
+swagger: "2.0"

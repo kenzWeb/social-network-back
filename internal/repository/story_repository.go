@@ -113,3 +113,33 @@ func (r StoryRepository) DeleteExpiredStories(ctx context.Context, hoursLimit in
 		Where("created_at < ?", timeLimit).
 		Delete(&models.Story{}).Error
 }
+
+func (r StoryRepository) GetFollowedUsersWithStories(ctx context.Context, userID string) ([]models.User, error) {
+	var users []models.User
+	timeLimit := time.Now().Add(-24 * time.Hour)
+
+	if err := r.db.WithContext(ctx).
+		Distinct("users.*").
+		Joins("JOIN follows ON follows.following_id = users.id").
+		Where("follows.follower_id = ?", userID).
+		Where("EXISTS (SELECT 1 FROM stories WHERE stories.user_id = users.id AND stories.created_at > ?)", timeLimit).
+		Preload("Stories", "created_at > ?", timeLimit, func(db *gorm.DB) *gorm.DB {
+			return db.Order("created_at ASC")
+		}).
+		Find(&users).Error; err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
+func (r StoryRepository) GetExpiredStories(ctx context.Context, hoursLimit int) ([]models.Story, error) {
+	var stories []models.Story
+	timeLimit := time.Now().Add(-time.Duration(hoursLimit) * time.Hour)
+
+	if err := r.db.WithContext(ctx).
+		Where("created_at < ?", timeLimit).
+		Find(&stories).Error; err != nil {
+		return nil, err
+	}
+	return stories, nil
+}
