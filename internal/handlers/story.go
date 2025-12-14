@@ -56,7 +56,7 @@ func GetAllStories(storyRepo repository.StoryRepository) gin.HandlerFunc {
 			for _, s := range user.Stories {
 				storyResponses = append(storyResponses, StoryResponse{
 					ID:        s.ID,
-					MediaURL:  s.MediaURL,
+					MediaURL:  utils.GetFullURL(s.MediaURL),
 					MediaType: s.MediaType,
 					CreatedAt: s.CreatedAt,
 				})
@@ -64,7 +64,7 @@ func GetAllStories(storyRepo repository.StoryRepository) gin.HandlerFunc {
 			response = append(response, UserStoriesResponse{
 				ID:        user.ID,
 				Username:  user.Username,
-				AvatarURL: user.AvatarURL,
+				AvatarURL: utils.GetFullURL(user.AvatarURL),
 				Stories:   storyResponses,
 			})
 		}
@@ -89,7 +89,7 @@ func GetStoryById(storyRepo repository.StoryRepository) gin.HandlerFunc {
 
 		c.JSON(http.StatusOK, StoryResponse{
 			ID:        story.ID,
-			MediaURL:  story.MediaURL,
+			MediaURL:  utils.GetFullURL(story.MediaURL),
 			MediaType: story.MediaType,
 			CreatedAt: story.CreatedAt,
 		})
@@ -115,7 +115,7 @@ func GetStoriesByUser(storyRepo repository.StoryRepository) gin.HandlerFunc {
 		for _, s := range stories {
 			response = append(response, StoryResponse{
 				ID:        s.ID,
-				MediaURL:  s.MediaURL,
+				MediaURL:  utils.GetFullURL(s.MediaURL),
 				MediaType: s.MediaType,
 				CreatedAt: s.CreatedAt,
 			})
@@ -139,7 +139,7 @@ func GetStoriesByUserId(storyRepo repository.StoryRepository) gin.HandlerFunc {
 		for _, s := range stories {
 			response = append(response, StoryResponse{
 				ID:        s.ID,
-				MediaURL:  s.MediaURL,
+				MediaURL:  utils.GetFullURL(s.MediaURL),
 				MediaType: s.MediaType,
 				CreatedAt: s.CreatedAt,
 			})
@@ -225,7 +225,7 @@ func CreateStory(storyRepo repository.StoryRepository) gin.HandlerFunc {
 			// Fallback if fetch fails
 			c.JSON(http.StatusCreated, StoryResponse{
 				ID:        story.ID,
-				MediaURL:  story.MediaURL,
+				MediaURL:  utils.GetFullURL(story.MediaURL),
 				MediaType: story.MediaType,
 				CreatedAt: story.CreatedAt,
 			})
@@ -234,7 +234,7 @@ func CreateStory(storyRepo repository.StoryRepository) gin.HandlerFunc {
 
 		c.JSON(http.StatusCreated, StoryResponse{
 			ID:        fullStory.ID,
-			MediaURL:  fullStory.MediaURL,
+			MediaURL:  utils.GetFullURL(fullStory.MediaURL),
 			MediaType: fullStory.MediaType,
 			CreatedAt: fullStory.CreatedAt,
 		})
@@ -310,7 +310,7 @@ func UpdateStory(storyRepo repository.StoryRepository) gin.HandlerFunc {
 		if err != nil {
 			c.JSON(http.StatusOK, StoryResponse{
 				ID:        story.ID,
-				MediaURL:  story.MediaURL,
+				MediaURL:  utils.GetFullURL(story.MediaURL),
 				MediaType: story.MediaType,
 				CreatedAt: story.CreatedAt,
 			})
@@ -319,7 +319,7 @@ func UpdateStory(storyRepo repository.StoryRepository) gin.HandlerFunc {
 
 		c.JSON(http.StatusOK, StoryResponse{
 			ID:        fullStory.ID,
-			MediaURL:  fullStory.MediaURL,
+			MediaURL:  utils.GetFullURL(fullStory.MediaURL),
 			MediaType: fullStory.MediaType,
 			CreatedAt: fullStory.CreatedAt,
 		})

@@ -49,7 +49,7 @@ func GetPostsByUser(postRepo repository.PostRepository) gin.HandlerFunc {
 				ID:        p.ID,
 				UserID:    p.UserID,
 				Content:   p.Content,
-				ImageURL:  p.ImageURL,
+				ImageURL:  utils.GetFullURL(p.ImageURL),
 				Likes:     p.LikesCount,
 				Comments:  p.CommentsCount,
 				CreatedAt: p.CreatedAt,
@@ -117,12 +117,11 @@ func CreatePost(postRepo repository.PostRepository) gin.HandlerFunc {
 
 		full, err := postRepo.GetById(c.Request.Context(), post.ID)
 		if err != nil {
-			// Fallback
 			c.JSON(http.StatusCreated, PostResponse{
 				ID:        post.ID,
 				UserID:    post.UserID,
 				Content:   post.Content,
-				ImageURL:  post.ImageURL,
+				ImageURL:  utils.GetFullURL(post.ImageURL),
 				CreatedAt: post.CreatedAt,
 			})
 			return
@@ -132,7 +131,7 @@ func CreatePost(postRepo repository.PostRepository) gin.HandlerFunc {
 			ID:        full.ID,
 			UserID:    full.UserID,
 			Content:   full.Content,
-			ImageURL:  full.ImageURL,
+			ImageURL:  utils.GetFullURL(full.ImageURL),
 			Likes:     full.LikesCount,
 			Comments:  full.CommentsCount,
 			CreatedAt: full.CreatedAt,
@@ -197,7 +196,7 @@ func UpdatePost(postRepo repository.PostRepository) gin.HandlerFunc {
 				ID:        post.ID,
 				UserID:    post.UserID,
 				Content:   post.Content,
-				ImageURL:  post.ImageURL,
+				ImageURL:  utils.GetFullURL(post.ImageURL),
 				CreatedAt: post.CreatedAt,
 			})
 			return
@@ -207,7 +206,7 @@ func UpdatePost(postRepo repository.PostRepository) gin.HandlerFunc {
 			ID:        full.ID,
 			UserID:    full.UserID,
 			Content:   full.Content,
-			ImageURL:  full.ImageURL,
+			ImageURL:  utils.GetFullURL(full.ImageURL),
 			Likes:     full.LikesCount,
 			Comments:  full.CommentsCount,
 			CreatedAt: full.CreatedAt,
