@@ -14,9 +14,7 @@
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
-uploads
-/cmd/seeder
-/cmd/gen_stories
+/uploads
 
 # Go workspace file
 go.work

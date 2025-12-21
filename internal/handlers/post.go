@@ -49,7 +49,7 @@ func GetPostsByUser(postRepo repository.PostRepository) gin.HandlerFunc {
 				ID:        p.ID,
 				UserID:    p.UserID,
 				Content:   p.Content,
-				ImageURL:  utils.GetFullURL(p.ImageURL),
+				ImageURL:  p.ImageURL,
 				Likes:     p.LikesCount,
 				Comments:  p.CommentsCount,
 				CreatedAt: p.CreatedAt,
@@ -121,7 +121,7 @@ func CreatePost(postRepo repository.PostRepository) gin.HandlerFunc {
 				ID:        post.ID,
 				UserID:    post.UserID,
 				Content:   post.Content,
-				ImageURL:  utils.GetFullURL(post.ImageURL),
+				ImageURL:  post.ImageURL,
 				CreatedAt: post.CreatedAt,
 			})
 			return
@@ -131,7 +131,7 @@ func CreatePost(postRepo repository.PostRepository) gin.HandlerFunc {
 			ID:        full.ID,
 			UserID:    full.UserID,
 			Content:   full.Content,
-			ImageURL:  utils.GetFullURL(full.ImageURL),
+			ImageURL:  full.ImageURL,
 			Likes:     full.LikesCount,
 			Comments:  full.CommentsCount,
 			CreatedAt: full.CreatedAt,
@@ -196,7 +196,7 @@ func UpdatePost(postRepo repository.PostRepository) gin.HandlerFunc {
 				ID:        post.ID,
 				UserID:    post.UserID,
 				Content:   post.Content,
-				ImageURL:  utils.GetFullURL(post.ImageURL),
+				ImageURL:  post.ImageURL,
 				CreatedAt: post.CreatedAt,
 			})
 			return
@@ -206,7 +206,7 @@ func UpdatePost(postRepo repository.PostRepository) gin.HandlerFunc {
 			ID:        full.ID,
 			UserID:    full.UserID,
 			Content:   full.Content,
-			ImageURL:  utils.GetFullURL(full.ImageURL),
+			ImageURL:  full.ImageURL,
 			Likes:     full.LikesCount,
 			Comments:  full.CommentsCount,
 			CreatedAt: full.CreatedAt,
