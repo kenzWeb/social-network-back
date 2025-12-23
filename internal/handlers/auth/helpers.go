@@ -4,8 +4,10 @@ import (
 	"errors"
 	"time"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	"modern-social-media/internal/auth"
+
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func setRefreshCookie(c *gin.Context, token string) {
@@ -24,23 +26,28 @@ func parseAccessSubject(jwtSecret string, authz string) (string, error) {
 	if len(authz) < 8 || authz[:7] != "Bearer " {
 		return "", errors.New("missing bearer token")
 	}
+
 	tokenStr := authz[7:]
-	parsed, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
+	var claims auth.AccessClaims
+
+	token, err := jwt.ParseWithClaims(tokenStr, &claims, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")
 		}
 		return []byte(jwtSecret), nil
 	})
-	if err != nil || !parsed.Valid {
+
+	if err != nil {
 		return "", errors.New("invalid token")
 	}
-	claims, ok := parsed.Claims.(jwt.MapClaims)
-	if !ok || claims["type"] != "access" {
+
+	if !token.Valid {
 		return "", errors.New("invalid token")
 	}
-	sub, _ := claims["sub"].(string)
-	if sub == "" {
+
+	if err := claims.Validate(); err != nil {
 		return "", errors.New("invalid token")
 	}
-	return sub, nil
+
+	return claims.UserID, nil
 }

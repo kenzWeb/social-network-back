@@ -4,9 +4,10 @@ import (
 	"errors"
 	"time"
 
+	"modern-social-media/internal/auth"
 	"modern-social-media/internal/models"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type TokenService interface {
@@ -22,38 +23,60 @@ type JWTTokenService struct {
 }
 
 func (s *JWTTokenService) IssueAccess(u *models.User) (string, error) {
-	claims := jwt.MapClaims{
-		"sub":      u.ID,
-		"email":    u.Email,
-		"username": u.Username,
-		"type":     "access",
-		"exp":      time.Now().Add(s.AccessTTL).Unix(),
-		"iat":      time.Now().Unix(),
+	now := time.Now()
+	claims := auth.AccessClaims{
+		UserID:   u.ID,
+		Email:    u.Email,
+		Username: u.Username,
+		Type:     "access",
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   u.ID,
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(s.AccessTTL)),
+		},
 	}
-	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return t.SignedString(s.Secret)
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(s.Secret)
 }
 
 func (s *JWTTokenService) IssueRefresh(u *models.User) (string, error) {
-	claims := jwt.MapClaims{
-		"sub":  u.ID,
-		"type": "refresh",
-		"exp":  time.Now().Add(s.RefreshTTL).Unix(),
-		"iat":  time.Now().Unix(),
+	now := time.Now()
+	claims := auth.RefreshClaims{
+		UserID: u.ID,
+		Type:   "refresh",
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   u.ID,
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(s.RefreshTTL)),
+		},
 	}
-	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return t.SignedString(s.Secret)
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(s.Secret)
 }
 
 func (s *JWTTokenService) ParseRefresh(tokenStr string) (string, error) {
-	p, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) { return s.Secret, nil })
-	if err != nil || !p.Valid {
+	var claims auth.RefreshClaims
+
+	token, err := jwt.ParseWithClaims(tokenStr, &claims, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+		return s.Secret, nil
+	})
+
+	if err != nil {
 		return "", errors.New("invalid_refresh")
 	}
-	c, ok := p.Claims.(jwt.MapClaims)
-	if !ok || c["type"] != "refresh" {
+
+	if !token.Valid {
 		return "", errors.New("invalid_refresh")
 	}
-	sub, _ := c["sub"].(string)
-	return sub, nil
+
+	if err := claims.Validate(); err != nil {
+		return "", errors.New("invalid_refresh")
+	}
+
+	return claims.UserID, nil
 }

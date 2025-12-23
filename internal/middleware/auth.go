@@ -5,44 +5,63 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/dgrijalva/jwt-go"
+	"modern-social-media/internal/auth"
+
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func Auth(jwtSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authz := c.GetHeader("Authorization")
-		if !strings.HasPrefix(authz, "Bearer ") {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		token := extractBearerToken(c)
+		if token == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing authorization token"})
 			return
 		}
-		tokenStr := strings.TrimPrefix(authz, "Bearer ")
-		parsed, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
-			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, errors.New("unexpected signing method")
-			}
-			return []byte(jwtSecret), nil
-		})
-		if err != nil || !parsed.Valid {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+
+		claims, err := validateAccessToken(token, jwtSecret)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 			return
 		}
-		claims, ok := parsed.Claims.(jwt.MapClaims)
-		if !ok || claims["type"] != "access" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token type"})
-			return
-		}
-		sub, _ := claims["sub"].(string)
-		if sub == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid subject"})
-			return
-		}
-		c.Set("userID", sub)
-		if v, exists := claims["is_admin"]; exists {
-			c.Set("isAdmin", v)
-		}
+
+		c.Set("userID", claims.UserID)
+		c.Set("isAdmin", claims.IsAdmin)
 		c.Next()
 	}
+}
+
+func extractBearerToken(c *gin.Context) string {
+	authz := c.GetHeader("Authorization")
+	if !strings.HasPrefix(authz, "Bearer ") {
+		return ""
+	}
+	return strings.TrimPrefix(authz, "Bearer ")
+}
+
+func validateAccessToken(tokenStr, secret string) (*auth.AccessClaims, error) {
+	var claims auth.AccessClaims
+
+	token, err := jwt.ParseWithClaims(tokenStr, &claims, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+		return []byte(secret), nil
+	})
+
+	if err != nil {
+		return nil, errors.New("invalid token")
+	}
+
+	if !token.Valid {
+		return nil, errors.New("invalid token")
+	}
+
+	if err := claims.Validate(); err != nil {
+		return nil, err
+	}
+
+	return &claims, nil
 }
 
 func StaticToken(required string) gin.HandlerFunc {

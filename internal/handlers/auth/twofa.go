@@ -5,10 +5,11 @@ import (
 	"net/http"
 	"time"
 
+	"modern-social-media/internal/auth"
 	"modern-social-media/internal/services"
 
-	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func VerifyLogin2FAWithService(svc services.AuthService) gin.HandlerFunc {
@@ -108,34 +109,49 @@ func Refresh(jwtSecret string) gin.HandlerFunc {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing refresh token"})
 			return
 		}
-		parsed, err := jwt.Parse(cookie, func(t *jwt.Token) (interface{}, error) {
+
+		var claims auth.RefreshClaims
+		token, err := jwt.ParseWithClaims(cookie, &claims, func(t *jwt.Token) (interface{}, error) {
 			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, errors.New("unexpected signing method")
 			}
 			return []byte(jwtSecret), nil
 		})
-		if err != nil || !parsed.Valid {
+
+		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
 			return
 		}
-		claims, ok := parsed.Claims.(jwt.MapClaims)
-		if !ok || claims["type"] != "refresh" {
+
+		if !token.Valid {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
+			return
+		}
+
+		if err := claims.Validate(); err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token type"})
 			return
 		}
-		sub, _ := claims["sub"].(string)
-		accClaims := jwt.MapClaims{
-			"sub":  sub,
-			"type": "access",
-			"exp":  time.Now().Add(15 * time.Minute).Unix(),
-			"iat":  time.Now().Unix(),
+
+		// Create new access token
+		now := time.Now()
+		accClaims := auth.AccessClaims{
+			UserID: claims.UserID,
+			Type:   "access",
+			RegisteredClaims: jwt.RegisteredClaims{
+				Subject:   claims.UserID,
+				IssuedAt:  jwt.NewNumericDate(now),
+				ExpiresAt: jwt.NewNumericDate(now.Add(15 * time.Minute)),
+			},
 		}
-		token := jwt.NewWithClaims(jwt.SigningMethodHS256, accClaims)
-		signed, err := token.SignedString([]byte(jwtSecret))
+
+		accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accClaims)
+		signed, err := accessToken.SignedString([]byte(jwtSecret))
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sign token"})
 			return
 		}
+
 		c.JSON(http.StatusOK, gin.H{"token": signed})
 	}
 }
