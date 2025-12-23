@@ -1,62 +1,93 @@
-# Binaries for programs and plugins
+# General
+# ===============
+# Useful ignores for local development, temporary files, build artifacts and IDEs
+
+# Binaries and build outputs
+/bin/
+/app
+/build/
+/dist/
+/out/
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
-
-# Test binary, built with `go test -c`
 *.test
-
-# Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+coverage.out
+*.prof
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
-
-/uploads
-
-# Go workspace file
+# Go-specific
+/vendor/
+Godeps/
+Gopkg.lock
+Gopkg.toml
+# Keep module checksums and go.mod tracked (do NOT ignore go.sum or go.mod unless intentional)
 go.work
 
-# Environment variables
+# Runtime / environment
 .env
+.env.*
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+*.pid
+pids
+*.seed
+*.pid.lock
+
+# Uploads / generated media
+/uploads/
+/uploads/**
+/stories/
+
+# Temporary files and caches
+tmp/
+temp/
+*.tmp
+.cache
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Node
+node_modules/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Certificates and keys
+*.pem
+*.key
+*.crt
 
 # Database files
 *.db
 *.sqlite
 *.sqlite3
 
-# IDE files
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# Logs
-*.log
-logs/
-
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# Coverage directory used by tools like istanbul
+# Coverage and test artifacts
 coverage/
 *.lcov
 
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+# Misc
+*.exe
+*.out
+
