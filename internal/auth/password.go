@@ -20,11 +20,11 @@ const (
 
 func HashPassword(password string) (string, error) {
 	if password == "" {
-		return "", errors.New("empty password")
+		return "", errors.New("Empty password")
 	}
 	salt := make([]byte, saltLen)
 	if _, err := rand.Read(salt); err != nil {
-		return "", fmt.Errorf("salt generation failed: %w", err)
+		return "", fmt.Errorf("Salt generation failed: %w", err)
 	}
 	hash := argon2.IDKey([]byte(password), salt, argonTime, argonMemory, argonThreads, argonKeyLen)
 
@@ -37,26 +37,26 @@ func HashPassword(password string) (string, error) {
 
 func VerifyPassword(encodedHash, password string) (bool, error) {
 	if encodedHash == "" || password == "" {
-		return false, errors.New("empty input")
+		return false, errors.New("Empty input")
 	}
 	parts := strings.Split(encodedHash, "$")
 	if len(parts) != 6 || parts[1] != "argon2id" {
-		return false, errors.New("invalid hash format")
+		return false, errors.New("Invalid hash format")
 	}
 
 	var mem uint32
 	var time uint32
 	var threads uint8
 	if _, err := fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &mem, &time, &threads); err != nil {
-		return false, fmt.Errorf("invalid params: %w", err)
+		return false, fmt.Errorf("Invalid params: %w", err)
 	}
 	saltB, err := base64.RawStdEncoding.DecodeString(parts[4])
 	if err != nil {
-		return false, fmt.Errorf("invalid salt b64: %w", err)
+		return false, fmt.Errorf("Invalid salt b64: %w", err)
 	}
 	hashB, err := base64.RawStdEncoding.DecodeString(parts[5])
 	if err != nil {
-		return false, fmt.Errorf("invalid hash b64: %w", err)
+		return false, fmt.Errorf("Invalid hash b64: %w", err)
 	}
 
 	computed := argon2.IDKey([]byte(password), saltB, time, mem, threads, uint32(len(hashB)))

@@ -18,7 +18,7 @@ func RegisterWithService(svc services.AuthService) gin.HandlerFunc {
 			LastName  string `json:"last_name"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 			return
 		}
 		user, err := svc.Register(c.Request.Context(), services.RegisterInput{
@@ -44,6 +44,6 @@ func RegisterWithService(svc services.AuthService) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 			return
 		}
-		c.JSON(http.StatusCreated, gin.H{"message": "user created; verification code sent to email", "user": user})
+		c.JSON(http.StatusCreated, gin.H{"message": "User created; verification code sent to your Email", "user": user})
 	}
 }
