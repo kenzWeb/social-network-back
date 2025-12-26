@@ -1,9 +1,18 @@
+// @title Modern Social Network API
+// @version 1.0
+// @description API for Modern Social Network
+// @host localhost:8080
+// @BasePath /api/v1
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 package main
 
 import (
 	"context"
 	"log"
 	"time"
+
 	"modern-social-media/internal/env"
 	"modern-social-media/internal/repository"
 	"modern-social-media/internal/services"
