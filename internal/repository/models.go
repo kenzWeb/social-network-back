@@ -13,6 +13,7 @@ type Models struct {
 	Stories           StoryRepository
 	Chat              ChatRepository
 	Skills            SkillRepository
+	Notifications     NotificationRepository
 }
 
 func NewModels(db *gorm.DB) *Models {
@@ -27,5 +28,6 @@ func NewModels(db *gorm.DB) *Models {
 		Stories:           StoryRepository{db: db},
 		Chat:              NewChatRepository(db),
 		Skills:            SkillRepository{db: db},
+		Notifications:     NotificationRepository{db: db},
 	}
 }

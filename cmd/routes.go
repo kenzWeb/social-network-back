@@ -51,6 +51,7 @@ func (app *application) routes() http.Handler {
 	introutes.RegisterStoryRoutes(v1, deps)
 	introutes.RegisterFollowRoutes(v1, deps)
 	introutes.RegisterSkillRoutes(v1, deps)
+	introutes.RegisterNotificationRoutes(v1, deps)
 
 	hub := handlers.NewHub()
 	introutes.RegisterChatRoutes(v1, deps, hub)

@@ -24,6 +24,7 @@ func MigrateDatabase(db *gorm.DB) error {
 		&models.ConversationParticipant{},
 		&models.Message{},
 		&models.Skill{},
+		&models.Notification{},
 	)
 	if err != nil {
 		return err
@@ -83,6 +84,17 @@ func createIndexes(db *gorm.DB) error {
 		return err
 	}
 	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at DESC)").Error; err != nil {
+		return err
+	}
+
+	// Notification indexes
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id)").Error; err != nil {
+		return err
+	}
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC)").Error; err != nil {
+		return err
+	}
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, read)").Error; err != nil {
 		return err
 	}
 

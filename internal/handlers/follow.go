@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"modern-social-media/internal/models"
 	"modern-social-media/internal/repository"
 
 	"github.com/gin-gonic/gin"
@@ -34,6 +35,38 @@ func ToggleFollow(repo repository.FollowRepository) gin.HandlerFunc {
 	}
 }
 
+func ToggleFollowWithNotification(followRepo repository.FollowRepository, notifRepo repository.NotificationRepository) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		uidAny, ok := c.Get("userID")
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			return
+		}
+		followerID := uidAny.(string)
+		targetID := c.Param("id")
+
+		following, err := followRepo.ToggleFollow(c.Request.Context(), followerID, targetID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		if following {
+			notification := &models.Notification{
+				UserID:  targetID,
+				ActorID: followerID,
+				Type:    models.NotificationTypeFollow,
+			}
+			_ = notifRepo.Create(c.Request.Context(), notification)
+		} else {
+			_ = notifRepo.DeleteByActorAndType(c.Request.Context(), targetID, followerID, models.NotificationTypeFollow)
+		}
+
+		followers, _ := followRepo.CountFollowers(c.Request.Context(), targetID)
+		c.JSON(http.StatusOK, followStatusResponse{Following: following, Followers: followers})
+	}
+}
+
 func Follow(repo repository.FollowRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		uidAny, ok := c.Get("userID")
@@ -53,6 +86,36 @@ func Follow(repo repository.FollowRepository) gin.HandlerFunc {
 	}
 }
 
+func FollowWithNotification(followRepo repository.FollowRepository, notifRepo repository.NotificationRepository) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		uidAny, ok := c.Get("userID")
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			return
+		}
+		followerID := uidAny.(string)
+		targetID := c.Param("id")
+
+		created, err := followRepo.Follow(c.Request.Context(), followerID, targetID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		if created {
+			notification := &models.Notification{
+				UserID:  targetID,
+				ActorID: followerID,
+				Type:    models.NotificationTypeFollow,
+			}
+			_ = notifRepo.Create(c.Request.Context(), notification)
+		}
+
+		followers, _ := followRepo.CountFollowers(c.Request.Context(), targetID)
+		c.JSON(http.StatusOK, followStatusResponse{Following: true, Followers: followers})
+	}
+}
+
 func Unfollow(repo repository.FollowRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		uidAny, ok := c.Get("userID")
@@ -68,6 +131,29 @@ func Unfollow(repo repository.FollowRepository) gin.HandlerFunc {
 			return
 		}
 		followers, _ := repo.CountFollowers(c.Request.Context(), targetID)
+		c.JSON(http.StatusOK, followStatusResponse{Following: false, Followers: followers})
+	}
+}
+
+func UnfollowWithNotification(followRepo repository.FollowRepository, notifRepo repository.NotificationRepository) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		uidAny, ok := c.Get("userID")
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			return
+		}
+		followerID := uidAny.(string)
+		targetID := c.Param("id")
+
+		_, err := followRepo.Unfollow(c.Request.Context(), followerID, targetID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		_ = notifRepo.DeleteByActorAndType(c.Request.Context(), targetID, followerID, models.NotificationTypeFollow)
+
+		followers, _ := followRepo.CountFollowers(c.Request.Context(), targetID)
 		c.JSON(http.StatusOK, followStatusResponse{Following: false, Followers: followers})
 	}
 }
