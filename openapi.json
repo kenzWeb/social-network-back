@@ -18,7 +18,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handlers.UserDTO"
+                            "$ref": "#/definitions/internal_handlers.UserDTO"
                         }
                     }
                 }
@@ -44,7 +44,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.CreateUserRequest"
+                            "$ref": "#/definitions/internal_handlers.CreateUserRequest"
                         }
                     }
                 ],
@@ -52,7 +52,220 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/handlers.UserDTO"
+                            "$ref": "#/definitions/internal_handlers.UserDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get all notifications for the authenticated user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Get notifications",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Offset",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.notificationListResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications/read-all": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mark all notifications as read for the authenticated user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Mark all notifications as read",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications/unread": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get unread notifications for the authenticated user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Get unread notifications",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Offset",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.notificationListResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications/unread/count": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the count of unread notifications",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Get unread count",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "integer",
+                                "format": "int64"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a specific notification",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Delete notification",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Notification ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications/{id}/read": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mark a specific notification as read",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Mark notification as read",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Notification ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -74,7 +287,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/handlers.PostResponse"
+                                "$ref": "#/definitions/internal_handlers.PostResponse"
                             }
                         }
                     }
@@ -99,7 +312,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.CreatePostRequest"
+                            "$ref": "#/definitions/internal_handlers.CreatePostRequest"
                         }
                     }
                 ],
@@ -107,7 +320,7 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/handlers.PostResponse"
+                            "$ref": "#/definitions/internal_handlers.PostResponse"
                         }
                     }
                 }
@@ -140,7 +353,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.UpdatePostRequest"
+                            "$ref": "#/definitions/internal_handlers.UpdatePostRequest"
                         }
                     }
                 ],
@@ -148,7 +361,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handlers.PostResponse"
+                            "$ref": "#/definitions/internal_handlers.PostResponse"
                         }
                     }
                 }
@@ -180,7 +393,7 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/handlers.StoryResponse"
+                            "$ref": "#/definitions/internal_handlers.StoryResponse"
                         }
                     }
                 }
@@ -202,7 +415,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/handlers.UserStoriesResponse"
+                                "$ref": "#/definitions/internal_handlers.UserStoriesResponse"
                             }
                         }
                     }
@@ -225,7 +438,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/handlers.UserDTO"
+                                "$ref": "#/definitions/internal_handlers.UserDTO"
                             }
                         }
                     }
@@ -255,7 +468,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handlers.UserDTO"
+                            "$ref": "#/definitions/internal_handlers.UserDTO"
                         }
                     }
                 }
@@ -284,7 +497,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handlers.UserDTO"
+                            "$ref": "#/definitions/internal_handlers.UserDTO"
                         }
                     }
                 }
@@ -315,7 +528,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.UpdateUserRequest"
+                            "$ref": "#/definitions/internal_handlers.UpdateUserRequest"
                         }
                     }
                 ],
@@ -323,7 +536,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handlers.UserDTO"
+                            "$ref": "#/definitions/internal_handlers.UserDTO"
                         }
                     }
                 }
@@ -331,7 +544,7 @@
         }
     },
     "definitions": {
-        "handlers.CreatePostRequest": {
+        "internal_handlers.CreatePostRequest": {
             "type": "object",
             "properties": {
                 "content": {
@@ -342,7 +555,7 @@
                 }
             }
         },
-        "handlers.CreateUserRequest": {
+        "internal_handlers.CreateUserRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -368,7 +581,7 @@
                 }
             }
         },
-        "handlers.PostResponse": {
+        "internal_handlers.PostResponse": {
             "type": "object",
             "properties": {
                 "comments_count": {
@@ -394,7 +607,7 @@
                 }
             }
         },
-        "handlers.StoryResponse": {
+        "internal_handlers.StoryResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -411,7 +624,7 @@
                 }
             }
         },
-        "handlers.UpdatePostRequest": {
+        "internal_handlers.UpdatePostRequest": {
             "type": "object",
             "properties": {
                 "content": {
@@ -422,7 +635,7 @@
                 }
             }
         },
-        "handlers.UpdateUserRequest": {
+        "internal_handlers.UpdateUserRequest": {
             "type": "object",
             "properties": {
                 "avatar_url": {
@@ -457,7 +670,7 @@
                 }
             }
         },
-        "handlers.UserDTO": {
+        "internal_handlers.UserDTO": {
             "type": "object",
             "properties": {
                 "avatar_url": {
@@ -504,7 +717,7 @@
                 }
             }
         },
-        "handlers.UserStoriesResponse": {
+        "internal_handlers.UserStoriesResponse": {
             "type": "object",
             "properties": {
                 "avatar_url": {
@@ -516,10 +729,70 @@
                 "stories": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/handlers.StoryResponse"
+                        "$ref": "#/definitions/internal_handlers.StoryResponse"
                     }
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handlers.actorInfo": {
+            "type": "object",
+            "properties": {
+                "avatar_url": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_verified": {
+                    "type": "boolean"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handlers.notificationListResponse": {
+            "type": "object",
+            "properties": {
+                "notifications": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_handlers.notificationResponse"
+                    }
+                },
+                "unread_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_handlers.notificationResponse": {
+            "type": "object",
+            "properties": {
+                "actor": {
+                    "$ref": "#/definitions/internal_handlers.actorInfo"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "read": {
+                    "type": "boolean"
+                },
+                "target_id": {
+                    "type": "string"
+                },
+                "type": {
                     "type": "string"
                 }
             }
