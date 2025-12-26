@@ -31,6 +31,7 @@ type User struct {
 	Followers []Follow  `gorm:"foreignKey:FollowingID" json:"followers,omitempty"`
 	Following []Follow  `gorm:"foreignKey:FollowerID" json:"following,omitempty"`
 	Stories   []Story   `gorm:"foreignKey:UserID" json:"stories"`
+	Notifications []Notification `gorm:"foreignKey:UserID" json:"notifications,omitempty"`
 }
 
 func (u *User) BeforeCreate(tx *gorm.DB) error {
