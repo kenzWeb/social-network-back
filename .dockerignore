@@ -1,0 +1,11 @@
+.git
+.gitignore
+.vscode
+tmp
+*.exe
+*.log
+coverage.out
+.air.toml
+.env
+.env.local
+README.md

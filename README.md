@@ -99,6 +99,54 @@ go run ./cmd
 - миграции (`AutoMigrate` + индексы + ограничения);
 - периодическая очистка просроченных stories.
 
+## Запуск через Docker
+
+### 1. Подготовить .env
+
+Скопируйте `.env.example` в `.env` и при необходимости измените значения:
+
+- Linux/macOS: `cp .env.example .env`
+- Windows PowerShell: `Copy-Item .env.example .env`
+
+### 2. Поднять контейнеры
+
+```bash
+docker compose up --build -d
+```
+
+Состав:
+
+- `app` - Go API (порт `8080`)
+- `db` - PostgreSQL 16 (порт `5432`)
+- `seed` - одноразовый сервис сидеров (профиль `tools`)
+
+### 3. Проверка
+
+- API: `http://localhost:8080/openapi.json`
+- Swagger UI: `http://localhost:8080/swagger/index.html`
+
+### 4. Остановить
+
+```bash
+docker compose down
+```
+
+Если нужно удалить и тома (данные БД и uploads):
+
+```bash
+docker compose down -v
+```
+
+### 5. Запуск сидеров через Docker
+
+Запустить все сидеры (users/follows + stories):
+
+```bash
+docker compose --profile tools run --rm seed
+```
+
+Команда использует сервис `seed` из `docker-compose.yml` и подключается к той же БД (`db`).
+
 ## Документация API
 
 - Swagger UI: `GET /swagger/index.html`
