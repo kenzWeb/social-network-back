@@ -6,8 +6,10 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -33,6 +35,8 @@ var (
 )
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
+
 	if err := godotenv.Load("../../.env"); err != nil {
 		if err := godotenv.Load(); err != nil {
 			log.Println("Error loading .env file")
@@ -67,36 +71,39 @@ func main() {
 
 	hashedPassword, _ := auth.HashPassword("password123")
 
-	// 2. Prepare Avatar Pool (10 images)
+	// 2. Prepare Avatar Pool (curated, human-like styles + local fallback)
 	avatarDir := "uploads/avatars/random"
 	if err := os.MkdirAll(avatarDir, 0755); err != nil {
 		log.Fatal(err)
 	}
 
 	var avatarPaths []string
-	log.Println("Preparing avatar pool (10 images)...")
-	for i := 1; i <= 10; i++ {
-		filename := fmt.Sprintf("pool_avatar_%d.png", i)
+	log.Println("Preparing avatar pool (24 images)...")
+	avatarSeeds := buildAvatarSeeds(firstNames, lastNames)
+	poolSize := 24
+	for i := 0; i < poolSize; i++ {
+		seed := avatarSeeds[i%len(avatarSeeds)]
+		filename := fmt.Sprintf("pool_avatar_%02d.svg", i+1)
 		localPath := filepath.Join(avatarDir, filename)
 		webPath := fmt.Sprintf("/uploads/avatars/random/%s", filename)
 
-		// Download if not exists
+		// Download only if missing to keep startup fast on subsequent runs.
 		if _, err := os.Stat(localPath); os.IsNotExist(err) {
-			
-			// Use different seed for each avatar in pool
-			// We can just use the index 'i' as seed to be deterministic or consistent
-			seed := fmt.Sprintf("pool_seed_%d", i)
-			url := fmt.Sprintf("https://robohash.org/%s?set=set3&bgset=bg1", seed)
-			
-			if err := downloadAvatar(url, localPath); err != nil {
-				log.Printf("Failed to download avatar %d: %v", i, err)
-				continue
+			avatarURL := buildAvatarURL(seed, i)
+			if err := downloadAvatar(avatarURL, localPath); err != nil {
+				initials := initialsFromSeed(seed)
+				if svgErr := writeFallbackAvatarSVG(localPath, initials, i); svgErr != nil {
+					log.Printf("Failed to generate avatar %d: %v", i+1, svgErr)
+					continue
+				}
+				log.Printf("Avatar %d downloaded failed (%v). Fallback SVG generated.", i+1, err)
+			} else {
+				fmt.Printf("Prepared pool avatar %d\n", i+1)
 			}
-			fmt.Printf("Downloaded pool avatar %d\n", i)
 		} else {
-			fmt.Printf("Using existing pool avatar %d\n", i)
+			fmt.Printf("Using existing pool avatar %d\n", i+1)
 		}
-		
+
 		avatarPaths = append(avatarPaths, webPath)
 	}
 
@@ -116,17 +123,17 @@ func main() {
 		avatar := avatarPaths[rand.Intn(len(avatarPaths))]
 
 		user := models.User{
-			Username:     fmt.Sprintf("%s%s_%s", first, last, suffix),
-			Email:        strings.ToLower(fmt.Sprintf("%s.%s.%s@example.com", first, last, suffix)),
-			Password:     hashedPassword,
-			FirstName:    first,
-			LastName:     last,
-			Bio:          fmt.Sprintf("Hello, I am %s!", first),
-			AvatarURL:    avatar,
-			IsActive:     true,
-			IsVerified:   true,
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
+			Username:   fmt.Sprintf("%s%s_%s", first, last, suffix),
+			Email:      strings.ToLower(fmt.Sprintf("%s.%s.%s@example.com", first, last, suffix)),
+			Password:   hashedPassword,
+			FirstName:  first,
+			LastName:   last,
+			Bio:        fmt.Sprintf("Hello, I am %s!", first),
+			AvatarURL:  avatar,
+			IsActive:   true,
+			IsVerified: true,
+			CreatedAt:  time.Now(),
+			UpdatedAt:  time.Now(),
 		}
 
 		if err := db.Create(&user).Error; err != nil {
@@ -192,7 +199,14 @@ func getEnv(key, fallback string) string {
 }
 
 func downloadAvatar(url, destPath string) error {
-	resp, err := http.Get(url)
+	client := &http.Client{Timeout: 12 * time.Second}
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("User-Agent", "modern-social-media-seeder/1.0")
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -210,4 +224,64 @@ func downloadAvatar(url, destPath string) error {
 
 	_, err = io.Copy(out, resp.Body)
 	return err
+}
+
+func buildAvatarSeeds(first, last []string) []string {
+	var seeds []string
+	for i := 0; i < len(first) && i < len(last); i++ {
+		seeds = append(seeds, strings.ToLower(first[i]+"_"+last[i]))
+	}
+
+	for i := range first {
+		seeds = append(seeds, strings.ToLower(first[i]))
+	}
+
+	sort.Strings(seeds)
+	if len(seeds) == 0 {
+		return []string{"default_user"}
+	}
+	return seeds
+}
+
+func buildAvatarURL(seed string, index int) string {
+	styles := []string{"personas", "adventurer-neutral", "micah", "lorelei-neutral"}
+	style := styles[index%len(styles)]
+	escapedSeed := url.QueryEscape(seed)
+
+	// DiceBear gives cleaner profile-like avatars than robohash set3.
+	return fmt.Sprintf(
+		"https://api.dicebear.com/9.x/%s/svg?seed=%s&size=256&backgroundType=gradientLinear",
+		style,
+		escapedSeed,
+	)
+}
+
+func initialsFromSeed(seed string) string {
+	parts := strings.FieldsFunc(seed, func(r rune) bool {
+		return r == '_' || r == '-' || r == '.' || r == ' '
+	})
+	if len(parts) == 0 {
+		return "U"
+	}
+
+	first := strings.ToUpper(string(parts[0][0]))
+	if len(parts) == 1 {
+		return first
+	}
+	second := strings.ToUpper(string(parts[1][0]))
+	return first + second
+}
+
+func writeFallbackAvatarSVG(path, initials string, index int) error {
+	bgColors := []string{"#1D4ED8", "#047857", "#B45309", "#7C3AED", "#BE185D", "#0F766E"}
+	bg := bgColors[index%len(bgColors)]
+
+	svg := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="avatar">
+  <rect width="256" height="256" rx="64" fill="%s"/>
+  <text x="50%%" y="54%%" text-anchor="middle" dominant-baseline="middle" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="96" font-weight="700">%s</text>
+</svg>
+`, bg, initials)
+
+	return os.WriteFile(path, []byte(svg), 0644)
 }

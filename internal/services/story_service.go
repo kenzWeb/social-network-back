@@ -3,8 +3,9 @@ package services
 import (
 	"context"
 	"fmt"
-	"os"
 	"modern-social-media/internal/repository"
+	"os"
+	"strings"
 )
 
 type StoryService struct {
@@ -27,6 +28,10 @@ func (s *StoryService) CleanupExpiredStories(ctx context.Context) error {
 
 	for _, story := range stories {
 		if story.MediaURL != "" {
+			if isRemoteURL(story.MediaURL) {
+				continue
+			}
+
 			relativePath := story.MediaURL
 			if len(relativePath) > 0 && relativePath[0] == '/' {
 				relativePath = relativePath[1:]
@@ -41,4 +46,9 @@ func (s *StoryService) CleanupExpiredStories(ctx context.Context) error {
 	}
 	
 	return s.Repo.DeleteExpiredStories(ctx, 24)
+}
+
+func isRemoteURL(path string) bool {
+	lower := strings.ToLower(path)
+	return strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://")
 }

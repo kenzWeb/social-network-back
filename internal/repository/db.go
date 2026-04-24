@@ -13,7 +13,7 @@ func InitDb() (*gorm.DB, error) {
 	port := getEnv("DB_PORT", "5432")
 	user := getEnv("DB_USER", "postgres")
 	password := getEnv("DB_PASSWORD", "")
-	dbname := getEnv("DB_NAME", "social_media")
+	dbname := getEnv("DB_NAME", "social_network")
 	sslmode := getEnv("DB_SSLMODE", "disable")
 
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
