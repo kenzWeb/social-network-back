@@ -1,9 +1,12 @@
 package handlers
 
 import (
+	"fmt"
 	"modern-social-media/internal/models"
 	"modern-social-media/internal/repository"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -59,6 +62,26 @@ func GetPostsByUser(postRepo repository.PostRepository) gin.HandlerFunc {
 	}
 }
 
+
+// @Summary Get all posts
+// @Description Get posts post all users
+// @Tags posts
+// @Produce json
+// @Success 200 {array} PostResponse
+// @Router /posts/all [get]
+func GetAllPosts(postRepo repository.PostRepository) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		posts, err := postRepo.GetAllPosts(c.Request.Context())
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch posts"})
+			return
+		}
+
+		c.JSON(http.StatusOK, posts)
+	}
+}
+
 // @name CreatePostRequest
 type CreatePostRequest struct {
 	Content  string `json:"content"`
@@ -72,23 +95,26 @@ type UpdatePostRequest struct {
 }
 
 // @Summary Create post
-// @Description Create a new post
+// @Description Create a new post with optional image
 // @Tags posts
-// @Accept json
+// @Accept multipart/form-data
 // @Produce json
-// @Param request body CreatePostRequest true "Post content"
+// @Param content formData string true "Post content"
+// @Param image formData file false "Post image"
 // @Success 201 {object} PostResponse
 // @Router /posts [post]
 func CreatePost(postRepo repository.PostRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req CreatePostRequest
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		const maxUploadSize = 5 << 20
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxUploadSize)
 
+		if err := c.Request.ParseMultipartForm(maxUploadSize); err != nil {
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "Request too large (max 5MB)"})
 			return
 		}
 
-		if req.Content == "" {
+		content := c.PostForm("content")
+		if strings.TrimSpace(content) == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Content is required"})
 			return
 		}
@@ -100,10 +126,32 @@ func CreatePost(postRepo repository.PostRepository) gin.HandlerFunc {
 		}
 		userID, _ := uidAny.(string)
 
+		var imageURL string
+		file, err := c.FormFile("image")
+		if err == nil {
+			ext := strings.ToLower(filepath.Ext(filepath.Base(file.Filename)))
+			
+			if ext != ".jpg" && ext != ".jpeg" && ext != ".png" && ext != ".gif" && ext != ".webp" {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Only image files are allowed (.jpg, .png, .gif, .webp)"})
+				return
+			}
+
+			os.MkdirAll("uploads/posts", os.ModePerm)
+
+			filename := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
+			path := filepath.Join("uploads", "posts", filename)
+
+			if err := c.SaveUploadedFile(file, path); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save image"})
+				return
+			}
+			imageURL = "/uploads/posts/" + filename
+		}
+
 		post := &models.Post{
 			UserID:   userID,
-			Content:  req.Content,
-			ImageURL: req.ImageURL,
+			Content:  content,
+			ImageURL: imageURL,
 		}
 
 		if err := postRepo.CreatePost(c.Request.Context(), post); err != nil {

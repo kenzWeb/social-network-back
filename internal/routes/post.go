@@ -10,6 +10,8 @@ import (
 func RegisterPostRoutes(rg *gin.RouterGroup, d Deps) {
 	rg.GET("/post", middleware.Auth(d.JWTSecret), handlers.GetPostsByUser(d.Models.Posts))
 
+	rg.GET("/post/all", middleware.Auth(d.JWTSecret), handlers.GetAllPosts(d.Models.Posts))
+
 	rg.POST("/post", middleware.Auth(d.JWTSecret), handlers.CreatePost(d.Models.Posts))
 
 	rg.PUT("/post/:id", middleware.Auth(d.JWTSecret), handlers.UpdatePost(d.Models.Posts))

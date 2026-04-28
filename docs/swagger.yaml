@@ -1,11 +1,5 @@
+basePath: /api/v1
 definitions:
-  handlers.CreatePostRequest:
-    properties:
-      content:
-        type: string
-      imageUrl:
-        type: string
-    type: object
   handlers.CreateUserRequest:
     properties:
       email:
@@ -126,8 +120,51 @@ definitions:
       username:
         type: string
     type: object
+  handlers.actorInfo:
+    properties:
+      avatar_url:
+        type: string
+      first_name:
+        type: string
+      id:
+        type: string
+      is_verified:
+        type: boolean
+      last_name:
+        type: string
+      username:
+        type: string
+    type: object
+  handlers.notificationListResponse:
+    properties:
+      notifications:
+        items:
+          $ref: '#/definitions/handlers.notificationResponse'
+        type: array
+      unread_count:
+        type: integer
+    type: object
+  handlers.notificationResponse:
+    properties:
+      actor:
+        $ref: '#/definitions/handlers.actorInfo'
+      created_at:
+        type: string
+      id:
+        type: string
+      read:
+        type: boolean
+      target_id:
+        type: string
+      type:
+        type: string
+    type: object
+host: localhost:8080
 info:
   contact: {}
+  description: API for Modern Social Network
+  title: Modern Social Network API
+  version: "1.0"
 paths:
   /auth/me:
     get:
@@ -164,6 +201,139 @@ paths:
       summary: Create user
       tags:
       - users
+  /notifications:
+    get:
+      description: Get all notifications for the authenticated user
+      parameters:
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.notificationListResponse'
+      security:
+      - BearerAuth: []
+      summary: Get notifications
+      tags:
+      - notifications
+  /notifications/{id}:
+    delete:
+      description: Delete a specific notification
+      parameters:
+      - description: Notification ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete notification
+      tags:
+      - notifications
+  /notifications/{id}/read:
+    patch:
+      description: Mark a specific notification as read
+      parameters:
+      - description: Notification ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Mark notification as read
+      tags:
+      - notifications
+  /notifications/read-all:
+    patch:
+      description: Mark all notifications as read for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Mark all notifications as read
+      tags:
+      - notifications
+  /notifications/unread:
+    get:
+      description: Get unread notifications for the authenticated user
+      parameters:
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.notificationListResponse'
+      security:
+      - BearerAuth: []
+      summary: Get unread notifications
+      tags:
+      - notifications
+  /notifications/unread/count:
+    get:
+      description: Get the count of unread notifications
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              format: int64
+              type: integer
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get unread count
+      tags:
+      - notifications
   /posts:
     get:
       description: Get posts by user
@@ -181,15 +351,18 @@ paths:
       - posts
     post:
       consumes:
-      - application/json
-      description: Create a new post
+      - multipart/form-data
+      description: Create a new post with optional image
       parameters:
       - description: Post content
-        in: body
-        name: request
+        in: formData
+        name: content
         required: true
-        schema:
-          $ref: '#/definitions/handlers.CreatePostRequest'
+        type: string
+      - description: Post image
+        in: formData
+        name: image
+        type: file
       produces:
       - application/json
       responses:
@@ -225,6 +398,21 @@ paths:
           schema:
             $ref: '#/definitions/handlers.PostResponse'
       summary: Update post
+      tags:
+      - posts
+  /posts/all:
+    get:
+      description: Get posts post all users
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.PostResponse'
+            type: array
+      summary: Get all posts
       tags:
       - posts
   /story:
@@ -342,4 +530,9 @@ paths:
       summary: Get user by email
       tags:
       - users
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

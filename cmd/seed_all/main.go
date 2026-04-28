@@ -16,6 +16,7 @@ func main() {
 	steps := []seederStep{
 		{name: "users/follows", path: "./cmd/seeder"},
 		{name: "stories", path: "./cmd/gen_stories"},
+		{name: "posts", path: "./cmd/seed_posts"},
 	}
 
 	for _, step := range steps {
